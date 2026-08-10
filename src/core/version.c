@@ -1,4 +1,4 @@
-#include "solver.h"
+#include "scrabble/version.h"
 
 const char *scrabble_solver_version(void) {
     return "0.1.0";

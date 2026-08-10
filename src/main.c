@@ -1,4 +1,4 @@
-#include "solver.h"
+#include "scrabble/version.h"
 
 #include <stdio.h>
 
