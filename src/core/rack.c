@@ -29,7 +29,15 @@ ScrabbleRackStatus scrabble_rack_init(ScrabbleRack *rack, const char *tiles) {
     }
 
     for (size_t index = 0; index < tile_count; ++index) {
-        int alphabet_index = letter_index((unsigned char)tiles[index]);
+        unsigned char tile = (unsigned char)tiles[index];
+        int alphabet_index;
+
+        if (tile == '?' || tile == '*') {
+            ++rack->blank_count;
+            continue;
+        }
+
+        alphabet_index = letter_index(tile);
 
         if (alphabet_index < 0) {
             memset(rack, 0, sizeof(*rack));
@@ -44,8 +52,19 @@ ScrabbleRackStatus scrabble_rack_init(ScrabbleRack *rack, const char *tiles) {
 }
 
 int scrabble_rack_can_form(const ScrabbleRack *rack, const char *word) {
+    return scrabble_rack_match(rack, word, NULL);
+}
+
+int scrabble_rack_match(const ScrabbleRack *rack, const char *word,
+                        ScrabbleRackMatch *match) {
     unsigned char available[SCRABBLE_ALPHABET_SIZE];
+    unsigned char blanks_available;
+    ScrabbleRackMatch candidate = {{0}, 0};
     size_t word_length;
+
+    if (match != NULL) {
+        memset(match, 0, sizeof(*match));
+    }
 
     if (rack == NULL || word == NULL) {
         return 0;
@@ -57,15 +76,28 @@ int scrabble_rack_can_form(const ScrabbleRack *rack, const char *word) {
     }
 
     memcpy(available, rack->letter_counts, sizeof(available));
+    blanks_available = rack->blank_count;
 
     for (size_t index = 0; index < word_length; ++index) {
         int alphabet_index = letter_index((unsigned char)word[index]);
 
-        if (alphabet_index < 0 || available[alphabet_index] == 0) {
+        if (alphabet_index < 0) {
             return 0;
         }
 
-        --available[alphabet_index];
+        if (available[alphabet_index] > 0) {
+            --available[alphabet_index];
+        } else if (blanks_available > 0) {
+            --blanks_available;
+            ++candidate.blank_letter_counts[alphabet_index];
+            ++candidate.blanks_used;
+        } else {
+            return 0;
+        }
+    }
+
+    if (match != NULL) {
+        *match = candidate;
     }
 
     return 1;
