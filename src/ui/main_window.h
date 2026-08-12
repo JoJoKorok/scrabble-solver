@@ -3,6 +3,9 @@
 
 #include <gtk/gtk.h>
 
-void scrabble_main_window_present(GtkApplication *application);
+void scrabble_main_window_present(
+    GtkApplication *application,
+    const char *dictionary_path,
+    const char *resource_error);
 
 #endif

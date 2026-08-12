@@ -19,6 +19,7 @@ typedef struct {
     GtkWidget *status_label;
     GtkWidget *result_list;
     ScrabbleDictionary *dictionary;
+    char *dictionary_error;
 } ScrabbleMainWindow;
 
 static void set_status(ScrabbleMainWindow *main_window, const char *message) {
@@ -40,10 +41,13 @@ static void update_input_state(ScrabbleMainWindow *main_window) {
 
     gtk_widget_set_sensitive(main_window->solve_button, valid);
     if (main_window->dictionary == NULL) {
-        set_status(main_window, "The word dictionary could not be loaded.");
+        set_status(main_window, main_window->dictionary_error);
+        gtk_widget_add_css_class(main_window->status_label, "error");
     } else if (!valid) {
+        gtk_widget_remove_css_class(main_window->status_label, "error");
         set_status(main_window, "Enter one to seven letters or blank tiles.");
     } else {
+        gtk_widget_remove_css_class(main_window->status_label, "error");
         set_status(main_window, "Ready to find words.");
     }
 }
@@ -104,7 +108,21 @@ static void destroy_main_window(gpointer data) {
     ScrabbleMainWindow *main_window = data;
 
     scrabble_dictionary_destroy(main_window->dictionary);
+    g_free(main_window->dictionary_error);
     g_free(main_window);
+}
+
+static const char *dictionary_load_error(ScrabbleDictionaryStatus status) {
+    switch (status) {
+        case SCRABBLE_DICTIONARY_OPEN_FAILED:
+            return "The dictionary was found but could not be opened.";
+        case SCRABBLE_DICTIONARY_READ_FAILED:
+            return "The dictionary could not be read completely.";
+        case SCRABBLE_DICTIONARY_OUT_OF_MEMORY:
+            return "There is not enough memory to load the dictionary.";
+        default:
+            return "The dictionary could not be loaded.";
+    }
 }
 
 static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
@@ -179,9 +197,13 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     return content;
 }
 
-void scrabble_main_window_present(GtkApplication *application) {
+void scrabble_main_window_present(
+    GtkApplication *application,
+    const char *dictionary_path,
+    const char *resource_error) {
     GtkWindow *active_window = gtk_application_get_active_window(application);
     ScrabbleMainWindow *main_window;
+    ScrabbleDictionaryStatus dictionary_status;
 
     if (active_window != NULL) {
         gtk_window_present(active_window);
@@ -189,8 +211,19 @@ void scrabble_main_window_present(GtkApplication *application) {
     }
 
     main_window = g_new0(ScrabbleMainWindow, 1);
-    main_window->dictionary = scrabble_dictionary_load(
-        "assets/dictionaries/demo.txt", NULL);
+    if (dictionary_path != NULL) {
+        main_window->dictionary = scrabble_dictionary_load(
+            dictionary_path, &dictionary_status);
+        if (main_window->dictionary == NULL) {
+            main_window->dictionary_error = g_strdup(
+                dictionary_load_error(dictionary_status));
+        }
+    } else {
+        main_window->dictionary_error = g_strdup(
+            resource_error == NULL
+                ? "The dictionary resource is unavailable."
+                : resource_error);
+    }
     main_window->window = gtk_application_window_new(application);
     g_object_set_data_full(
         G_OBJECT(main_window->window),

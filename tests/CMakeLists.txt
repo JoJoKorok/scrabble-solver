@@ -29,3 +29,12 @@ add_scrabble_test(test_scoring unit/test_scoring.c)
 add_scrabble_test(test_rack unit/test_rack.c)
 add_scrabble_test(test_dictionary unit/test_dictionary.c)
 add_scrabble_test(test_solver unit/test_solver.c)
+
+if(TARGET scrabble_ui_support)
+  add_executable(test_resources unit/test_resources.c)
+  target_link_libraries(test_resources PRIVATE scrabble_ui_support)
+  target_include_directories(test_resources PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/support
+  )
+  add_test(NAME test_resources COMMAND test_resources)
+endif()
