@@ -16,3 +16,8 @@ target_include_directories(scrabble_core PUBLIC include)
 
 add_executable(scrabble_solver src/main.c)
 target_link_libraries(scrabble_solver PRIVATE scrabble_core)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_subdirectory(tests)
+endif()

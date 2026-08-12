@@ -1,0 +1,9 @@
+#ifndef SCRABBLE_TEST_PATHS_H
+#define SCRABBLE_TEST_PATHS_H
+
+#define SCRABBLE_DICTIONARY_FIXTURE \
+    "@CMAKE_CURRENT_BINARY_DIR@/fixtures/dictionary.txt"
+#define SCRABBLE_SOLVER_DICTIONARY_FIXTURE \
+    "@CMAKE_CURRENT_BINARY_DIR@/fixtures/solver_dictionary.txt"
+
+#endif
