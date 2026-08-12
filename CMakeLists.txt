@@ -24,6 +24,7 @@ if(SCRABBLE_BUILD_GUI)
     src/main.c
     src/ui/application.c
     src/ui/main_window.c
+    src/ui/result_list.c
   )
   target_include_directories(scrabble_solver PRIVATE src)
   target_link_libraries(scrabble_solver PRIVATE
