@@ -1,10 +1,9 @@
 #ifndef SCRABBLE_RACK_H
 #define SCRABBLE_RACK_H
 
-#include <stddef.h>
+#include "scrabble/constants.h"
 
-#define SCRABBLE_RACK_CAPACITY 7
-#define SCRABBLE_ALPHABET_SIZE 26
+#include <stddef.h>
 
 typedef struct {
     unsigned char letter_counts[SCRABBLE_ALPHABET_SIZE];

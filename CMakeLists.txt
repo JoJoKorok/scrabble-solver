@@ -6,8 +6,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 add_library(scrabble_core
+  src/core/dictionary.c
   src/core/rack.c
   src/core/scoring.c
+  src/core/solver.c
   src/core/version.c
 )
 target_include_directories(scrabble_core PUBLIC include)
