@@ -1,8 +1,5 @@
-#include "scrabble/version.h"
+#include "ui/application.h"
 
-#include <stdio.h>
-
-int main(void) {
-    printf("Scrabble Solver %s\n", scrabble_solver_version());
-    return 0;
+int main(int argc, char **argv) {
+    return scrabble_application_run(argc, argv);
 }
