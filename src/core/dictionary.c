@@ -83,8 +83,9 @@ static void remove_duplicates(ScrabbleDictionary *dictionary) {
             strcmp(dictionary->words[index],
                    dictionary->words[unique_count - 1]) != 0) {
             if (unique_count != index) {
-                strcpy(dictionary->words[unique_count],
-                       dictionary->words[index]);
+                size_t word_size = strlen(dictionary->words[index]) + 1;
+                memmove(dictionary->words[unique_count],
+                        dictionary->words[index], word_size);
             }
             ++unique_count;
         }

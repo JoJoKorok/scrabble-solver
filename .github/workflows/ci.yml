@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  debian:
+    name: Debian 13
+    runs-on: ubuntu-latest
+    container: debian:13-slim
+    timeout-minutes: 20
+
+    steps:
+      - name: Install build dependencies
+        shell: sh
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates \
+            git \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkgconf \
+            libgtk-4-dev
+
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Configure GTK application
+        run: |
+          cmake -S . -B build-ci-gui -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
+            -DSCRABBLE_BUILD_GUI=ON \
+            -DBUILD_TESTING=ON
+
+      - name: Build GTK application
+        run: cmake --build build-ci-gui
+
+      - name: Test GTK application and core
+        run: ctest --test-dir build-ci-gui --output-on-failure
+
+      - name: Verify install layout
+        run: |
+          cmake --install build-ci-gui --prefix "$PWD/stage"
+          test -x stage/bin/scrabble_solver
+          test -f stage/share/scrabble-solver/dictionaries/demo.txt
+          test -f stage/share/scrabble-solver/styles/application.css
+
+      - name: Configure core-only build
+        run: |
+          cmake -S . -B build-ci-core -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
+            -DSCRABBLE_BUILD_GUI=OFF \
+            -DBUILD_TESTING=ON
+
+      - name: Build and test core-only configuration
+        run: |
+          cmake --build build-ci-core
+          ctest --test-dir build-ci-core --output-on-failure
+
+  windows:
+    name: Windows UCRT64
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Preserve LF line endings
+        shell: pwsh
+        run: git config --global core.autocrlf input
+
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up MSYS2 UCRT64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-gtk4
+
+      - name: Configure GTK application
+        run: |
+          cmake -S . -B build-ci-gui -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
+            -DSCRABBLE_BUILD_GUI=ON \
+            -DBUILD_TESTING=ON
+
+      - name: Build GTK application
+        run: cmake --build build-ci-gui
+
+      - name: Test GTK application and core
+        run: ctest --test-dir build-ci-gui --output-on-failure
+
+      - name: Verify install layout
+        run: |
+          cmake --install build-ci-gui --prefix "$PWD/stage"
+          test -f stage/bin/scrabble_solver.exe
+          test -f stage/share/scrabble-solver/dictionaries/demo.txt
+          test -f stage/share/scrabble-solver/styles/application.css
+
+      - name: Configure core-only build
+        run: |
+          cmake -S . -B build-ci-core -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
+            -DSCRABBLE_BUILD_GUI=OFF \
+            -DBUILD_TESTING=ON
+
+      - name: Build and test core-only configuration
+        run: |
+          cmake --build build-ci-core
+          ctest --test-dir build-ci-core --output-on-failure
