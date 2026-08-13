@@ -56,7 +56,8 @@ jobs:
         run: |
           cmake --install build-ci-gui --prefix "$PWD/stage"
           test -x stage/bin/scrabble_solver
-          test -f stage/share/scrabble-solver/dictionaries/demo.txt
+          test -f stage/share/scrabble-solver/dictionaries/enable2k.txt
+          test -f stage/share/scrabble-solver/dictionaries/README.md
           test -f stage/share/scrabble-solver/styles/application.css
 
       - name: Configure core-only build
@@ -120,7 +121,8 @@ jobs:
         run: |
           cmake --install build-ci-gui --prefix "$PWD/stage"
           test -f stage/bin/scrabble_solver.exe
-          test -f stage/share/scrabble-solver/dictionaries/demo.txt
+          test -f stage/share/scrabble-solver/dictionaries/enable2k.txt
+          test -f stage/share/scrabble-solver/dictionaries/README.md
           test -f stage/share/scrabble-solver/styles/application.css
 
       - name: Configure core-only build

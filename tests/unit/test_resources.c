@@ -1,4 +1,7 @@
 #include "platform/resources.h"
+#include "scrabble/dictionary.h"
+#include "scrabble/rack.h"
+#include "scrabble/solver.h"
 
 #include "test.h"
 
@@ -9,12 +12,61 @@ static int finds_source_resource(void) {
     g_unsetenv(SCRABBLE_DATA_DIRECTORY_ENV);
     char *path = scrabble_resource_find(
         "scrabble-test-program",
-        "dictionaries/demo.txt",
+        SCRABBLE_DEFAULT_DICTIONARY_PATH,
         &error);
 
     TEST_ASSERT(error == NULL);
     TEST_ASSERT(path != NULL);
     TEST_ASSERT(g_file_test(path, G_FILE_TEST_IS_REGULAR));
+    g_free(path);
+    return 0;
+}
+
+static int solves_reported_rack_with_default_dictionary(void) {
+    static const char *expected_words[] = {"FIX", "FOX", "NIX", "OXEN"};
+    GError *error = NULL;
+    char *path;
+    ScrabbleDictionaryStatus dictionary_status;
+    ScrabbleDictionary *dictionary;
+    ScrabbleRack rack;
+    ScrabbleResultSet results;
+
+    g_unsetenv(SCRABBLE_DATA_DIRECTORY_ENV);
+    path = scrabble_resource_find(
+        "scrabble-test-program",
+        SCRABBLE_DEFAULT_DICTIONARY_PATH,
+        &error);
+    TEST_ASSERT(error == NULL);
+    TEST_ASSERT(path != NULL);
+
+    dictionary = scrabble_dictionary_load(path, &dictionary_status);
+    TEST_ASSERT_INT(SCRABBLE_DICTIONARY_OK, dictionary_status);
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT_INT(169266, scrabble_dictionary_count(dictionary));
+    TEST_ASSERT_INT(SCRABBLE_RACK_OK,
+                    scrabble_rack_init(&rack, "EEOIFNX"));
+    TEST_ASSERT_INT(SCRABBLE_SOLVER_OK,
+                    scrabble_solve(dictionary, &rack, &results));
+
+    for (size_t expected_index = 0;
+         expected_index < G_N_ELEMENTS(expected_words);
+         ++expected_index) {
+        int found = 0;
+
+        for (size_t result_index = 0;
+             result_index < results.count;
+             ++result_index) {
+            if (strcmp(results.items[result_index].word,
+                       expected_words[expected_index]) == 0) {
+                found = 1;
+                break;
+            }
+        }
+        TEST_ASSERT(found);
+    }
+
+    scrabble_result_set_destroy(&results);
+    scrabble_dictionary_destroy(dictionary);
     g_free(path);
     return 0;
 }
@@ -158,6 +210,8 @@ static int bundled_lookup_ignores_incomplete_override(void) {
 
 static const ScrabbleTestCase TESTS[] = {
     {"finds source resource", finds_source_resource},
+    {"solves reported rack with default dictionary",
+     solves_reported_rack_with_default_dictionary},
     {"prefers environment override", prefers_environment_override},
     {"finds portable share resource", finds_portable_share_resource},
     {"reports missing and invalid resources",

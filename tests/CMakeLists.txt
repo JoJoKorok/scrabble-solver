@@ -36,7 +36,10 @@ target_compile_definitions(test_version PRIVATE
 
 if(TARGET scrabble_ui_support)
   add_executable(test_resources unit/test_resources.c)
-  target_link_libraries(test_resources PRIVATE scrabble_ui_support)
+  target_link_libraries(test_resources PRIVATE
+    scrabble_core
+    scrabble_ui_support
+  )
   target_include_directories(test_resources PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/support
   )

@@ -50,7 +50,7 @@ int scrabble_application_run(int argc, char **argv) {
 
     resources->dictionary_path = scrabble_resource_find(
         argc > 0 ? argv[0] : NULL,
-        "dictionaries/demo.txt",
+        SCRABBLE_DEFAULT_DICTIONARY_PATH,
         &resource_error);
     if (resource_error != NULL) {
         resources->dictionary_error = g_strdup(resource_error->message);

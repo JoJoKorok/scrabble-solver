@@ -9,6 +9,7 @@ The application currently supports:
 - uppercase or lowercase rack letters;
 - `?` or `*` for blank tiles;
 - zero-point scoring for letters supplied by blanks;
+- a bundled 169,266-word North American English word-game dictionary;
 - ranked, scrollable word suggestions; and
 - CMake build configurations for Windows and Debian.
 
@@ -20,17 +21,24 @@ The current development version is **0.1.0**. See [CHANGELOG.md](CHANGELOG.md)
 for milestone details and [docs/ROADMAP.md](docs/ROADMAP.md) for the planned
 path from rack solving to full board-position solving.
 
-## Dictionary notice
+## Dictionary
 
-The repository contains a deliberately small demonstration dictionary at
-`assets/dictionaries/demo.txt`. It is useful for building and testing the
-application, but it is not a tournament word list.
+The default dictionary at `assets/dictionaries/enable2k.txt` is derived from
+the public-domain ENABLE 2K word list. ENABLE was created as an open word-game
+alternative to proprietary official lists. The bundled copy contains 169,266
+unique words of 1–15 ASCII letters. Its source revision, transformation, and
+attribution are documented in
+[assets/dictionaries/README.md](assets/dictionaries/README.md).
+
+ENABLE 2K is not the current NASPA Word List or Collins Scrabble Words list.
+Accepted words can therefore differ from a particular commercial game,
+tournament, region, or edition.
 
 To use another dictionary, create a UTF-8 text file containing one alphabetic
 word per line and either:
 
-1. replace `assets/dictionaries/demo.txt`; or
-2. create `dictionaries/demo.txt` inside another folder and set
+1. replace `assets/dictionaries/enable2k.txt`; or
+2. create `dictionaries/enable2k.txt` inside another folder and set
    `SCRABBLE_SOLVER_DATA_DIR` to that folder before starting the application.
 
 Only words of 1–15 ASCII letters are loaded. Words are normalized to uppercase,
@@ -134,7 +142,8 @@ stage/
 └── share/
     └── scrabble-solver/
         ├── dictionaries/
-        │   └── demo.txt
+        │   ├── enable2k.txt
+        │   └── README.md
         └── styles/
             └── application.css
 ```

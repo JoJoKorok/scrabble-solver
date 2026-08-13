@@ -4,6 +4,7 @@
 #include <glib.h>
 
 #define SCRABBLE_DATA_DIRECTORY_ENV "SCRABBLE_SOLVER_DATA_DIR"
+#define SCRABBLE_DEFAULT_DICTIONARY_PATH "dictionaries/enable2k.txt"
 
 /* Finds an application data file using, in order: an environment override,
    portable locations beside the executable, the install location, and the

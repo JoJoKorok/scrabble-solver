@@ -15,8 +15,9 @@ Status: complete
 
 ## 0.2 - Dictionary experience
 
-Status: planned
+Status: in progress
 
+- Bundle and attribute a redistributable word-game dictionary.
 - Let users select and remember a local dictionary file.
 - Report dictionary source, size, and loading problems in the interface.
 - Improve search, filtering, and result navigation.

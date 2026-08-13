@@ -5,6 +5,13 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
 
 ## [Unreleased]
 
+### Added
+
+- A bundled, attributed ENABLE 2K word-game dictionary containing 169,266
+  supported words.
+- An integration test covering the `EEOIFNX` rack against the default
+  dictionary.
+
 ### Planned
 
 - User-selectable dictionary files.
