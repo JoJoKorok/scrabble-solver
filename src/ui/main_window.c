@@ -3,18 +3,21 @@
 #include "scrabble/dictionary.h"
 #include "scrabble/rack.h"
 #include "scrabble/solver.h"
+#include "ui/rack_view.h"
 #include "ui/result_list.h"
 
 enum {
-    WINDOW_DEFAULT_WIDTH = 640,
-    WINDOW_DEFAULT_HEIGHT = 520,
-    CONTENT_SPACING = 12,
-    CONTENT_MARGIN = 24
+    WINDOW_DEFAULT_WIDTH = 760,
+    WINDOW_DEFAULT_HEIGHT = 680,
+    WINDOW_MINIMUM_WIDTH = 520,
+    WINDOW_MINIMUM_HEIGHT = 480,
+    CONTENT_SPACING = 18
 };
 
 typedef struct {
     GtkWidget *window;
     GtkWidget *rack_entry;
+    GtkWidget *rack_view;
     GtkWidget *solve_button;
     GtkWidget *status_label;
     GtkWidget *result_list;
@@ -22,8 +25,19 @@ typedef struct {
     char *dictionary_error;
 } ScrabbleMainWindow;
 
-static void set_status(ScrabbleMainWindow *main_window, const char *message) {
+static void set_status(
+    ScrabbleMainWindow *main_window,
+    const char *message,
+    const char *style_class) {
+    static const char *classes[] = {
+        "status-muted", "status-ready", "status-success", "status-error"
+    };
+
+    for (size_t index = 0; index < G_N_ELEMENTS(classes); ++index) {
+        gtk_widget_remove_css_class(main_window->status_label, classes[index]);
+    }
     gtk_label_set_text(GTK_LABEL(main_window->status_label), message);
+    gtk_widget_add_css_class(main_window->status_label, style_class);
 }
 
 static int read_rack(ScrabbleMainWindow *main_window, ScrabbleRack *rack) {
@@ -41,14 +55,14 @@ static void update_input_state(ScrabbleMainWindow *main_window) {
 
     gtk_widget_set_sensitive(main_window->solve_button, valid);
     if (main_window->dictionary == NULL) {
-        set_status(main_window, main_window->dictionary_error);
-        gtk_widget_add_css_class(main_window->status_label, "error");
+        set_status(main_window, main_window->dictionary_error, "status-error");
     } else if (!valid) {
-        gtk_widget_remove_css_class(main_window->status_label, "error");
-        set_status(main_window, "Enter one to seven letters or blank tiles.");
+        set_status(
+            main_window,
+            "Enter one to seven letters or blank tiles.",
+            "status-muted");
     } else {
-        gtk_widget_remove_css_class(main_window->status_label, "error");
-        set_status(main_window, "Ready to find words.");
+        set_status(main_window, "Ready to find words.", "status-ready");
     }
 }
 
@@ -66,14 +80,17 @@ static void solve(ScrabbleMainWindow *main_window) {
     status = scrabble_solve(main_window->dictionary, &rack, &results);
     if (status != SCRABBLE_SOLVER_OK) {
         scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
-        set_status(main_window, "The search could not be completed.");
+        set_status(
+            main_window,
+            "The search could not be completed.",
+            "status-error");
         return;
     }
 
     scrabble_result_list_set_results(
         GTK_LIST_BOX(main_window->result_list), &results);
     if (results.count == 0) {
-        set_status(main_window, "No matching words found.");
+        set_status(main_window, "No matching words found.", "status-muted");
     } else {
         g_snprintf(
             message,
@@ -81,7 +98,7 @@ static void solve(ScrabbleMainWindow *main_window) {
             "%zu matching %s found.",
             results.count,
             results.count == 1 ? "word" : "words");
-        set_status(main_window, message);
+        set_status(main_window, message, "status-success");
     }
     scrabble_result_set_destroy(&results);
 }
@@ -90,6 +107,9 @@ static void on_rack_changed(GtkEditable *editable, gpointer user_data) {
     ScrabbleMainWindow *main_window = user_data;
 
     (void)editable;
+    scrabble_rack_view_set_tiles(
+        main_window->rack_view,
+        gtk_editable_get_text(GTK_EDITABLE(main_window->rack_entry)));
     scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
     update_input_state(main_window);
 }
@@ -129,31 +149,42 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     GtkWidget *content = gtk_box_new(GTK_ORIENTATION_VERTICAL, CONTENT_SPACING);
     GtkWidget *title = gtk_label_new("Scrabble Solver");
     GtkWidget *instructions = gtk_label_new(
-        "Enter up to seven rack tiles. Use ? or * for a blank tile.");
+        "Turn your rack into the strongest word. Use ? or * for a blank tile.");
+    GtkWidget *rack_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    GtkWidget *rack_heading = gtk_label_new("YOUR RACK");
     GtkWidget *controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *results_heading = gtk_label_new("WORD SUGGESTIONS");
     GtkWidget *results_scroll = gtk_scrolled_window_new();
     main_window->rack_entry = gtk_entry_new();
     main_window->solve_button = gtk_button_new_with_label("Find words");
     main_window->status_label = gtk_label_new(
         "Word suggestions will appear here in the next version.");
 
-    gtk_widget_set_margin_top(content, CONTENT_MARGIN);
-    gtk_widget_set_margin_bottom(content, CONTENT_MARGIN);
-    gtk_widget_set_margin_start(content, CONTENT_MARGIN);
-    gtk_widget_set_margin_end(content, CONTENT_MARGIN);
+    gtk_widget_add_css_class(content, "app-background");
+    gtk_widget_add_css_class(content, "app-content");
 
     gtk_widget_set_halign(title, GTK_ALIGN_START);
-    gtk_widget_add_css_class(title, "title-1");
+    gtk_widget_add_css_class(title, "app-title");
     gtk_box_append(GTK_BOX(content), title);
 
     gtk_widget_set_halign(instructions, GTK_ALIGN_START);
     gtk_label_set_wrap(GTK_LABEL(instructions), TRUE);
+    gtk_widget_add_css_class(instructions, "app-subtitle");
     gtk_box_append(GTK_BOX(content), instructions);
+
+    gtk_widget_add_css_class(rack_card, "surface-card");
+    gtk_widget_set_halign(rack_heading, GTK_ALIGN_START);
+    gtk_widget_add_css_class(rack_heading, "section-label");
+    gtk_box_append(GTK_BOX(rack_card), rack_heading);
+
+    main_window->rack_view = scrabble_rack_view_new();
+    gtk_box_append(GTK_BOX(rack_card), main_window->rack_view);
 
     gtk_entry_set_max_length(GTK_ENTRY(main_window->rack_entry), 7);
     gtk_entry_set_placeholder_text(
         GTK_ENTRY(main_window->rack_entry), "Example: RETAINS");
     gtk_widget_set_hexpand(main_window->rack_entry, TRUE);
+    gtk_widget_add_css_class(main_window->rack_entry, "rack-entry");
     gtk_accessible_update_property(
         GTK_ACCESSIBLE(main_window->rack_entry),
         GTK_ACCESSIBLE_PROPERTY_LABEL, "Rack tiles",
@@ -161,15 +192,23 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     gtk_box_append(GTK_BOX(controls), main_window->rack_entry);
 
     gtk_widget_set_sensitive(main_window->solve_button, FALSE);
+    gtk_widget_add_css_class(main_window->solve_button, "solve-button");
     gtk_box_append(GTK_BOX(controls), main_window->solve_button);
-    gtk_box_append(GTK_BOX(content), controls);
+    gtk_box_append(GTK_BOX(rack_card), controls);
 
     gtk_widget_set_halign(main_window->status_label, GTK_ALIGN_START);
     gtk_label_set_wrap(GTK_LABEL(main_window->status_label), TRUE);
-    gtk_box_append(GTK_BOX(content), main_window->status_label);
+    gtk_widget_add_css_class(main_window->status_label, "status-label");
+    gtk_box_append(GTK_BOX(rack_card), main_window->status_label);
+    gtk_box_append(GTK_BOX(content), rack_card);
+
+    gtk_widget_set_halign(results_heading, GTK_ALIGN_START);
+    gtk_widget_add_css_class(results_heading, "section-label");
+    gtk_box_append(GTK_BOX(content), results_heading);
 
     main_window->result_list = scrabble_result_list_new();
     gtk_widget_set_vexpand(results_scroll, TRUE);
+    gtk_widget_add_css_class(results_scroll, "results-scroll");
     gtk_scrolled_window_set_policy(
         GTK_SCROLLED_WINDOW(results_scroll),
         GTK_POLICY_NEVER,
@@ -236,6 +275,10 @@ void scrabble_main_window_present(
         GTK_WINDOW(main_window->window),
         WINDOW_DEFAULT_WIDTH,
         WINDOW_DEFAULT_HEIGHT);
+    gtk_widget_set_size_request(
+        main_window->window,
+        WINDOW_MINIMUM_WIDTH,
+        WINDOW_MINIMUM_HEIGHT);
     gtk_window_set_child(
         GTK_WINDOW(main_window->window), create_content(main_window));
     update_input_state(main_window);

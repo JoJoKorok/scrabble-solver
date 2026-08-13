@@ -61,11 +61,10 @@ static char *find_in_directory(const char *directory,
     return NULL;
 }
 
-char *scrabble_resource_find(
+static char *find_bundled_resource(
     const char *executable_path,
     const char *relative_path,
     GError **error) {
-    const char *override_directory;
     char *executable_directory;
     char *portable_directory;
     char *candidate;
@@ -78,24 +77,6 @@ char *scrabble_resource_find(
             scrabble_resource_error_quark(),
             SCRABBLE_RESOURCE_INVALID_ARGUMENT,
             "The resource path must be relative.");
-        return NULL;
-    }
-
-    override_directory = g_getenv(SCRABBLE_DATA_DIRECTORY_ENV);
-    if (override_directory != NULL && override_directory[0] != '\0') {
-        candidate = find_in_directory(override_directory, relative_path);
-        if (candidate != NULL) {
-            return candidate;
-        }
-
-        g_set_error(
-            error,
-            scrabble_resource_error_quark(),
-            SCRABBLE_RESOURCE_NOT_FOUND,
-            "%s is set to %s, but %s was not found there.",
-            SCRABBLE_DATA_DIRECTORY_ENV,
-            override_directory,
-            relative_path);
         return NULL;
     }
 
@@ -135,8 +116,68 @@ char *scrabble_resource_find(
         error,
         scrabble_resource_error_quark(),
         SCRABBLE_RESOURCE_NOT_FOUND,
+        "Could not find bundled resource %s.",
+        relative_path);
+    return NULL;
+}
+
+char *scrabble_resource_find(
+    const char *executable_path,
+    const char *relative_path,
+    GError **error) {
+    const char *override_directory;
+    char *candidate;
+    GError *bundled_error = NULL;
+
+    g_return_val_if_fail(error == NULL || *error == NULL, NULL);
+    if (relative_path == NULL || relative_path[0] == '\0' ||
+        g_path_is_absolute(relative_path)) {
+        g_set_error_literal(
+            error,
+            scrabble_resource_error_quark(),
+            SCRABBLE_RESOURCE_INVALID_ARGUMENT,
+            "The resource path must be relative.");
+        return NULL;
+    }
+
+    override_directory = g_getenv(SCRABBLE_DATA_DIRECTORY_ENV);
+    if (override_directory != NULL && override_directory[0] != '\0') {
+        candidate = find_in_directory(override_directory, relative_path);
+        if (candidate != NULL) {
+            return candidate;
+        }
+
+        g_set_error(
+            error,
+            scrabble_resource_error_quark(),
+            SCRABBLE_RESOURCE_NOT_FOUND,
+            "%s is set to %s, but %s was not found there.",
+            SCRABBLE_DATA_DIRECTORY_ENV,
+            override_directory,
+            relative_path);
+        return NULL;
+    }
+
+    candidate = find_bundled_resource(
+        executable_path, relative_path, &bundled_error);
+    if (candidate != NULL) {
+        return candidate;
+    }
+
+    g_clear_error(&bundled_error);
+    g_set_error(
+        error,
+        scrabble_resource_error_quark(),
+        SCRABBLE_RESOURCE_NOT_FOUND,
         "Could not find %s. Set %s to the application data folder.",
         relative_path,
         SCRABBLE_DATA_DIRECTORY_ENV);
     return NULL;
+}
+
+char *scrabble_resource_find_bundled(
+    const char *executable_path,
+    const char *relative_path,
+    GError **error) {
+    return find_bundled_resource(executable_path, relative_path, error);
 }

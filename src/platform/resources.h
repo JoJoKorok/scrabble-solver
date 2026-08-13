@@ -13,4 +13,12 @@ char *scrabble_resource_find(
     const char *relative_path,
     GError **error);
 
+/* Finds a bundled resource without consulting the environment override.
+   This is useful for optional presentation assets that should fall back to
+   the application installation even when custom data is incomplete. */
+char *scrabble_resource_find_bundled(
+    const char *executable_path,
+    const char *relative_path,
+    GError **error);
+
 #endif

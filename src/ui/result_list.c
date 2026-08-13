@@ -18,10 +18,11 @@ static GtkWidget *create_result_row(const ScrabbleResult *result) {
     gtk_widget_set_margin_bottom(row, 8);
     gtk_widget_set_margin_start(row, 12);
     gtk_widget_set_margin_end(row, 12);
+    gtk_widget_add_css_class(row, "result-row");
 
     gtk_widget_set_halign(word, GTK_ALIGN_START);
     gtk_widget_set_hexpand(word, TRUE);
-    gtk_widget_add_css_class(word, "heading");
+    gtk_widget_add_css_class(word, "result-word");
     gtk_box_append(GTK_BOX(row), word);
 
     if (result->rack_match.blanks_used > 0) {
@@ -35,11 +36,12 @@ static GtkWidget *create_result_row(const ScrabbleResult *result) {
             result->rack_match.blanks_used,
             result->rack_match.blanks_used == 1 ? "blank" : "blanks");
         blank_note = gtk_label_new(blank_text);
-        gtk_widget_add_css_class(blank_note, "dim-label");
+        gtk_widget_add_css_class(blank_note, "blank-chip");
         gtk_box_append(GTK_BOX(row), blank_note);
     }
 
     gtk_widget_set_halign(score, GTK_ALIGN_END);
+    gtk_widget_add_css_class(score, "score-chip");
     gtk_box_append(GTK_BOX(row), score);
     return row;
 }
@@ -48,7 +50,7 @@ GtkWidget *scrabble_result_list_new(void) {
     GtkWidget *list = gtk_list_box_new();
 
     gtk_list_box_set_selection_mode(GTK_LIST_BOX(list), GTK_SELECTION_NONE);
-    gtk_widget_add_css_class(list, "boxed-list");
+    gtk_widget_add_css_class(list, "results-list");
     return list;
 }
 

@@ -132,12 +132,38 @@ static int reports_missing_and_invalid_resources(void) {
     return 0;
 }
 
+static int bundled_lookup_ignores_incomplete_override(void) {
+    GError *error = NULL;
+    char *temporary_directory = g_dir_make_tmp(
+        "scrabble-theme-fallback-XXXXXX", &error);
+    char *path;
+
+    TEST_ASSERT(error == NULL);
+    TEST_ASSERT(temporary_directory != NULL);
+    TEST_ASSERT(g_setenv(
+        SCRABBLE_DATA_DIRECTORY_ENV, temporary_directory, TRUE));
+
+    path = scrabble_resource_find_bundled(
+        NULL, "styles/application.css", &error);
+    TEST_ASSERT(error == NULL);
+    TEST_ASSERT(path != NULL);
+    TEST_ASSERT(g_file_test(path, G_FILE_TEST_IS_REGULAR));
+
+    g_unsetenv(SCRABBLE_DATA_DIRECTORY_ENV);
+    g_rmdir(temporary_directory);
+    g_free(path);
+    g_free(temporary_directory);
+    return 0;
+}
+
 static const ScrabbleTestCase TESTS[] = {
     {"finds source resource", finds_source_resource},
     {"prefers environment override", prefers_environment_override},
     {"finds portable share resource", finds_portable_share_resource},
     {"reports missing and invalid resources",
-     reports_missing_and_invalid_resources}
+     reports_missing_and_invalid_resources},
+    {"bundled lookup ignores incomplete override",
+     bundled_lookup_ignores_incomplete_override}
 };
 
 TEST_MAIN(TESTS)
