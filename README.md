@@ -16,6 +16,10 @@ This is currently a **rack solver**, not a full board-position solver. Board
 placement, premium squares, cross-words, and move generation are planned for
 later development.
 
+The current development version is **0.1.0**. See [CHANGELOG.md](CHANGELOG.md)
+for milestone details and [docs/ROADMAP.md](docs/ROADMAP.md) for the planned
+path from rack solving to full board-position solving.
+
 ## Dictionary notice
 
 The repository contains a deliberately small demonstration dictionary at
@@ -141,7 +145,10 @@ the application. That packaging work is outside the current development build.
 ## Project structure
 
 ```text
+.github/                Continuous integration and contribution templates
 assets/                 Runtime dictionaries and styles
+cmake/                  Generated build metadata templates
+docs/                   Architecture and roadmap documentation
 include/scrabble/       Stable public API for the solver engine
 src/core/               Platform-independent solver implementation
 src/platform/           Cross-platform resource discovery
@@ -153,6 +160,9 @@ tests/unit/             Focused tests that mirror production modules
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for module responsibilities,
 ownership rules, and guidance for extending the project.
+
+Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md), which documents
+the required checks, architectural boundaries, and release process.
 
 ## Development checks
 
@@ -173,6 +183,9 @@ cmake -S . -B build-warnings -G Ninja \
 cmake --build build-warnings
 ctest --test-dir build-warnings --output-on-failure
 ```
+
+The same GUI and core-only configurations run automatically on Windows UCRT64
+and Debian 13 through [the CI workflow](.github/workflows/ci.yml).
 
 ## Name and trademark
 

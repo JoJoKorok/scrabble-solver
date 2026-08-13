@@ -1,5 +1,6 @@
 #include "scrabble/version.h"
+#include "scrabble/version_config.h"
 
 const char *scrabble_solver_version(void) {
-    return "0.1.0";
+    return SCRABBLE_SOLVER_VERSION;
 }

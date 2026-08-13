@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
-project(scrabble_solver VERSION 0.1.0 LANGUAGES C)
+project(
+  scrabble_solver
+  VERSION 0.1.0
+  DESCRIPTION "Cross-platform Scrabble rack solver"
+  HOMEPAGE_URL "https://github.com/JoJoKorok/scrabble-solver"
+  LANGUAGES C
+)
 
 include(GNUInstallDirs)
 
@@ -9,6 +15,12 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 option(SCRABBLE_BUILD_GUI "Build the GTK 4 desktop application" ON)
 
+configure_file(
+  cmake/version_config.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/generated/scrabble/version_config.h
+  @ONLY
+)
+
 add_library(scrabble_core
   src/core/dictionary.c
   src/core/rack.c
@@ -16,7 +28,10 @@ add_library(scrabble_core
   src/core/solver.c
   src/core/version.c
 )
-target_include_directories(scrabble_core PUBLIC include)
+target_include_directories(scrabble_core
+  PUBLIC include
+  PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated
+)
 
 if(SCRABBLE_BUILD_GUI)
   find_package(PkgConfig REQUIRED)

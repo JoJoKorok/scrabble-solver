@@ -1,0 +1,69 @@
+name: Bug report
+description: Report reproducible incorrect behavior or a crash
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve Scrabble Solver.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Provide the application version or commit identifier.
+      placeholder: 0.1.0 or a commit hash
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows UCRT64
+        - Debian
+        - Another Linux distribution
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the rack, dictionary setup, and exact actions used.
+      placeholder: |
+        1. Start the application...
+        2. Enter...
+        3. Select...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste relevant terminal output after removing private information.
+      render: shell
+  - type: textarea
+    id: context
+    attributes:
+      label: Screenshots or additional context
+      description: Attach images or add details that help explain the problem.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the existing issues for this problem.
+          required: true
+        - label: I can reproduce this with the current code.
+          required: true

@@ -29,6 +29,10 @@ add_scrabble_test(test_scoring unit/test_scoring.c)
 add_scrabble_test(test_rack unit/test_rack.c)
 add_scrabble_test(test_dictionary unit/test_dictionary.c)
 add_scrabble_test(test_solver unit/test_solver.c)
+add_scrabble_test(test_version unit/test_version.c)
+target_compile_definitions(test_version PRIVATE
+  SCRABBLE_TEST_PROJECT_VERSION="${PROJECT_VERSION}"
+)
 
 if(TARGET scrabble_ui_support)
   add_executable(test_resources unit/test_resources.c)

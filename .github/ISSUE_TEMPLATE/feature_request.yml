@@ -1,0 +1,43 @@
+name: Feature request
+description: Propose a focused improvement to the solver or desktop interface
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Explain the user or development problem, not only a solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe how the feature should work from the user's view.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Solver core
+        - Dictionary handling
+        - Desktop interface
+        - Build or packaging
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Note workarounds or other designs that could solve the problem.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I reviewed the roadmap and existing issues for similar work.
+          required: true
