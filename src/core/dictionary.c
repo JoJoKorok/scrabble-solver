@@ -1,5 +1,7 @@
 #include "scrabble/dictionary.h"
 
+#include "dictionary_internal.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +9,8 @@
 
 struct ScrabbleDictionary {
     char (*words)[SCRABBLE_MAX_WORD_LENGTH + 1];
+    size_t *candidate_indices;
+    size_t candidate_end_offsets[SCRABBLE_RACK_CAPACITY + 1];
     size_t count;
     size_t capacity;
 };
@@ -94,6 +98,49 @@ static void remove_duplicates(ScrabbleDictionary *dictionary) {
     dictionary->count = unique_count;
 }
 
+static int build_candidate_index(ScrabbleDictionary *dictionary) {
+    size_t counts[SCRABBLE_RACK_CAPACITY + 1] = {0};
+    size_t positions[SCRABBLE_RACK_CAPACITY + 1] = {0};
+    size_t candidate_count = 0;
+
+    for (size_t index = 0; index < dictionary->count; ++index) {
+        size_t length = strlen(dictionary->words[index]);
+
+        if (length <= SCRABBLE_RACK_CAPACITY) {
+            ++counts[length];
+            ++candidate_count;
+        }
+    }
+
+    if (candidate_count > SIZE_MAX / sizeof(*dictionary->candidate_indices)) {
+        return 0;
+    }
+
+    if (candidate_count > 0) {
+        dictionary->candidate_indices = malloc(
+            candidate_count * sizeof(*dictionary->candidate_indices));
+        if (dictionary->candidate_indices == NULL) {
+            return 0;
+        }
+    }
+
+    for (size_t length = 1; length <= SCRABBLE_RACK_CAPACITY; ++length) {
+        positions[length] = dictionary->candidate_end_offsets[length - 1];
+        dictionary->candidate_end_offsets[length] =
+            positions[length] + counts[length];
+    }
+
+    for (size_t index = 0; index < dictionary->count; ++index) {
+        size_t length = strlen(dictionary->words[index]);
+
+        if (length <= SCRABBLE_RACK_CAPACITY) {
+            dictionary->candidate_indices[positions[length]++] = index;
+        }
+    }
+
+    return 1;
+}
+
 ScrabbleDictionary *scrabble_dictionary_load(
     const char *path,
     ScrabbleDictionaryStatus *status) {
@@ -157,11 +204,17 @@ ScrabbleDictionary *scrabble_dictionary_load(
               sizeof(*dictionary->words), compare_words);
     }
     remove_duplicates(dictionary);
+    if (!build_candidate_index(dictionary)) {
+        scrabble_dictionary_destroy(dictionary);
+        set_status(status, SCRABBLE_DICTIONARY_OUT_OF_MEMORY);
+        return NULL;
+    }
     return dictionary;
 }
 
 void scrabble_dictionary_destroy(ScrabbleDictionary *dictionary) {
     if (dictionary != NULL) {
+        free(dictionary->candidate_indices);
         free(dictionary->words);
         free(dictionary);
     }
@@ -179,4 +232,32 @@ const char *scrabble_dictionary_word_at(
     }
 
     return dictionary->words[index];
+}
+
+size_t scrabble_dictionary_candidate_count(
+    const ScrabbleDictionary *dictionary,
+    size_t max_length) {
+    if (dictionary == NULL || max_length == 0) {
+        return 0;
+    }
+
+    if (max_length > SCRABBLE_RACK_CAPACITY) {
+        max_length = SCRABBLE_RACK_CAPACITY;
+    }
+
+    return dictionary->candidate_end_offsets[max_length];
+}
+
+const char *scrabble_dictionary_candidate_word_at(
+    const ScrabbleDictionary *dictionary,
+    size_t max_length,
+    size_t index) {
+    size_t candidate_count = scrabble_dictionary_candidate_count(
+        dictionary, max_length);
+
+    if (dictionary == NULL || index >= candidate_count) {
+        return NULL;
+    }
+
+    return dictionary->words[dictionary->candidate_indices[index]];
 }

@@ -28,10 +28,25 @@ configure_file(
 add_scrabble_test(test_scoring unit/test_scoring.c)
 add_scrabble_test(test_rack unit/test_rack.c)
 add_scrabble_test(test_dictionary unit/test_dictionary.c)
+target_include_directories(test_dictionary PRIVATE
+  ${PROJECT_SOURCE_DIR}/src/core
+)
 add_scrabble_test(test_solver unit/test_solver.c)
 add_scrabble_test(test_version unit/test_version.c)
 target_compile_definitions(test_version PRIVATE
   SCRABBLE_TEST_PROJECT_VERSION="${PROJECT_VERSION}"
+)
+
+add_scrabble_test(
+  test_large_dictionary
+  performance/test_large_dictionary.c
+)
+target_include_directories(test_large_dictionary PRIVATE
+  ${PROJECT_SOURCE_DIR}/src/core
+)
+set_tests_properties(test_large_dictionary PROPERTIES
+  LABELS "dictionary;performance"
+  TIMEOUT 15
 )
 
 if(TARGET scrabble_ui_support)

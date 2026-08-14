@@ -168,6 +168,7 @@ src/core/               Platform-independent solver implementation
 src/platform/           Cross-platform resource discovery
 src/ui/                 GTK application and reusable interface components
 tests/fixtures/         Small deterministic test data
+tests/performance/      Full-dictionary performance regression coverage
 tests/support/          Lightweight shared C test utilities
 tests/unit/             Focused tests that mirror production modules
 ```

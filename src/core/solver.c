@@ -1,5 +1,6 @@
 #include "scrabble/solver.h"
 
+#include "dictionary_internal.h"
 #include "scrabble/scoring.h"
 
 #include <stdint.h>
@@ -63,7 +64,7 @@ ScrabbleSolverStatus scrabble_solve(
     ScrabbleResultSet *results) {
     ScrabbleResult *items;
     size_t capacity = 0;
-    size_t dictionary_count;
+    size_t candidate_count;
     size_t result_count = 0;
 
     if (results == NULL) {
@@ -76,15 +77,17 @@ ScrabbleSolverStatus scrabble_solve(
         return SCRABBLE_SOLVER_INVALID_ARGUMENT;
     }
 
-    dictionary_count = scrabble_dictionary_count(dictionary);
-    if (dictionary_count == 0) {
+    candidate_count = scrabble_dictionary_candidate_count(
+        dictionary, rack->tile_count);
+    if (candidate_count == 0) {
         return SCRABBLE_SOLVER_OK;
     }
 
     items = NULL;
 
-    for (size_t index = 0; index < dictionary_count; ++index) {
-        const char *word = scrabble_dictionary_word_at(dictionary, index);
+    for (size_t index = 0; index < candidate_count; ++index) {
+        const char *word = scrabble_dictionary_candidate_word_at(
+            dictionary, rack->tile_count, index);
         ScrabbleRackMatch match;
 
         if (!scrabble_rack_match(rack, word, &match)) {

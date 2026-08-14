@@ -13,6 +13,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   dictionary.
 - Native custom dictionary selection with validation, remembered preferences,
   and a bundled-dictionary reset action.
+- A private word-length index and repeatable full-dictionary performance test
+  that keep rack searches responsive as dictionary support grows.
 
 ### Planned
 

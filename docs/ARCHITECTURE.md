@@ -35,6 +35,7 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 | `src/ui/rack_view.*` | Visual representation of the seven-tile rack |
 | `src/ui/result_list.*` | Rendering solver results without solving them |
 | `src/ui/theme.*` | Application-wide GTK stylesheet loading |
+| `tests/performance/` | Deterministic checks against the full bundled dictionary |
 | `tests/unit/` | Focused behavior tests corresponding to production modules |
 
 ## Ownership conventions
@@ -85,6 +86,15 @@ readable error state when custom dictionary data is misconfigured.
 
 Private helpers shared only within an implementation area should use private
 headers under that area rather than expanding the public API.
+
+## Dictionary candidate index
+
+The dictionary keeps its complete, alphabetically sorted word list for the
+public lookup API. It also owns a private index that groups words of up to seven
+letters by length. The rack solver reads this candidate view so it never scans
+words that cannot fit on the current rack. Keeping the index behind
+`src/core/dictionary_internal.h` leaves room for board-specific indexes later
+without committing their representation to the public core API.
 
 ## Adding a UI component
 

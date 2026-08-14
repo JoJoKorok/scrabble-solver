@@ -1,5 +1,6 @@
 #include "scrabble/dictionary.h"
 
+#include "dictionary_internal.h"
 #include "test.h"
 #include "test_paths.h"
 
@@ -35,9 +36,33 @@ static int reports_load_errors(void) {
     return 0;
 }
 
+static int indexes_rack_length_candidates(void) {
+    ScrabbleDictionaryStatus status;
+    ScrabbleDictionary *dictionary = scrabble_dictionary_load(
+        SCRABBLE_DICTIONARY_FIXTURE, &status);
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT_INT(SCRABBLE_DICTIONARY_OK, status);
+    TEST_ASSERT_INT(0, scrabble_dictionary_candidate_count(dictionary, 2));
+    TEST_ASSERT_INT(2, scrabble_dictionary_candidate_count(dictionary, 3));
+    TEST_ASSERT_INT(4, scrabble_dictionary_candidate_count(dictionary, 4));
+    TEST_ASSERT_INT(5, scrabble_dictionary_candidate_count(dictionary, 7));
+    TEST_ASSERT_STRING(
+        "CAT", scrabble_dictionary_candidate_word_at(dictionary, 7, 0));
+    TEST_ASSERT_STRING(
+        "QUIZ", scrabble_dictionary_candidate_word_at(dictionary, 7, 2));
+    TEST_ASSERT_STRING(
+        "APPLE", scrabble_dictionary_candidate_word_at(dictionary, 7, 4));
+    TEST_ASSERT(scrabble_dictionary_candidate_word_at(
+        dictionary, 7, 5) == NULL);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
 static const ScrabbleTestCase TESTS[] = {
     {"loads, normalizes, and deduplicates", loads_normalizes_and_deduplicates},
-    {"reports load errors", reports_load_errors}
+    {"reports load errors", reports_load_errors},
+    {"indexes rack-length candidates", indexes_rack_length_candidates}
 };
 
 TEST_MAIN(TESTS)
