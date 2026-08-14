@@ -22,6 +22,7 @@ configure_file(
 )
 
 add_library(scrabble_core
+  src/core/board.c
   src/core/dictionary.c
   src/core/rack.c
   src/core/scoring.c

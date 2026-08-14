@@ -13,6 +13,7 @@ GTK application
     └── scrabble_core
 
 scrabble_core
+    ├── board
     ├── dictionary
     ├── rack
     ├── scoring
@@ -27,7 +28,7 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 | Area | Responsibility |
 |---|---|
 | `include/scrabble/` | Public types and functions exposed by the core library |
-| `src/core/` | Dictionary loading, rack matching, scoring, and result ranking |
+| `src/core/` | Board state, dictionary loading, rack matching, scoring, and result ranking |
 | `src/platform/` | Runtime data discovery and persisted user settings |
 | `src/ui/application.*` | GTK lifecycle and application-scoped resources |
 | `src/ui/dictionary_picker.*` | Version-compatible native file selection |
@@ -45,6 +46,8 @@ global state:
 
 - `scrabble_dictionary_load()` returns an owned dictionary. Release it with
   `scrabble_dictionary_destroy()`.
+- `scrabble_board_create()` returns an owned board. Release it with
+  `scrabble_board_destroy()`.
 - `scrabble_solve()` fills an owned result set. Release it with
   `scrabble_result_set_destroy()`.
 - `scrabble_resource_find()` and `scrabble_resource_find_bundled()` return
@@ -108,7 +111,7 @@ dictionary, or scoring rules. Visual values belong in
 Full board solving should be introduced as additional core modules rather than
 being added to `main_window.c`. Likely boundaries include:
 
-- board state and premium-square layout;
+- premium-square layout;
 - move representation;
 - cross-check generation;
 - move validation;

@@ -15,10 +15,12 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   and a bundled-dictionary reset action.
 - A private word-length index and repeatable full-dictionary performance test
   that keep rack searches responsive as dictionary support grows.
+- A portable 15-by-15 board model with coordinate, tile, blank, center-square,
+  and reset support for future move generation.
 
 ### Planned
 
-- Full board-position representation and validation.
+- Opening and connected board-move validation.
 - Premium-square, cross-word, and bingo scoring.
 - Ranked legal move generation.
 - Self-contained Windows and Debian application packages.
