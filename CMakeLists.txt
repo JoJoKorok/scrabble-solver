@@ -39,6 +39,7 @@ if(SCRABBLE_BUILD_GUI)
 
   add_library(scrabble_ui_support STATIC
     src/platform/resources.c
+    src/platform/settings.c
   )
   target_include_directories(scrabble_ui_support PUBLIC src)
   target_compile_definitions(scrabble_ui_support PRIVATE
@@ -50,6 +51,7 @@ if(SCRABBLE_BUILD_GUI)
   add_executable(scrabble_solver WIN32
     src/main.c
     src/ui/application.c
+    src/ui/dictionary_picker.c
     src/ui/main_window.c
     src/ui/rack_view.c
     src/ui/result_list.c

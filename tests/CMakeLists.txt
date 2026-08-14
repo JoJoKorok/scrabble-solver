@@ -44,4 +44,11 @@ if(TARGET scrabble_ui_support)
     ${CMAKE_CURRENT_SOURCE_DIR}/support
   )
   add_test(NAME test_resources COMMAND test_resources)
+
+  add_executable(test_settings unit/test_settings.c)
+  target_link_libraries(test_settings PRIVATE scrabble_ui_support)
+  target_include_directories(test_settings PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/support
+  )
+  add_test(NAME test_settings COMMAND test_settings)
 endif()

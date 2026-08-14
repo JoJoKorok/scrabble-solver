@@ -1,8 +1,10 @@
 #include "ui/main_window.h"
 
+#include "platform/settings.h"
 #include "scrabble/dictionary.h"
 #include "scrabble/rack.h"
 #include "scrabble/solver.h"
+#include "ui/dictionary_picker.h"
 #include "ui/rack_view.h"
 #include "ui/result_list.h"
 
@@ -21,8 +23,15 @@ typedef struct {
     GtkWidget *solve_button;
     GtkWidget *status_label;
     GtkWidget *result_list;
+    GtkWidget *dictionary_label;
+    GtkWidget *reset_dictionary_button;
     ScrabbleDictionary *dictionary;
     char *dictionary_error;
+    char *bundled_dictionary_path;
+    char *active_dictionary_path;
+    char *settings_path;
+    gboolean using_custom_dictionary;
+    gboolean has_saved_dictionary_preference;
 } ScrabbleMainWindow;
 
 static void set_status(
@@ -55,7 +64,12 @@ static void update_input_state(ScrabbleMainWindow *main_window) {
 
     gtk_widget_set_sensitive(main_window->solve_button, valid);
     if (main_window->dictionary == NULL) {
-        set_status(main_window, main_window->dictionary_error, "status-error");
+        set_status(
+            main_window,
+            main_window->dictionary_error == NULL
+                ? "No dictionary is available. Choose a word-list file."
+                : main_window->dictionary_error,
+            "status-error");
     } else if (!valid) {
         set_status(
             main_window,
@@ -129,6 +143,9 @@ static void destroy_main_window(gpointer data) {
 
     scrabble_dictionary_destroy(main_window->dictionary);
     g_free(main_window->dictionary_error);
+    g_free(main_window->bundled_dictionary_path);
+    g_free(main_window->active_dictionary_path);
+    g_free(main_window->settings_path);
     g_free(main_window);
 }
 
@@ -145,11 +162,284 @@ static const char *dictionary_load_error(ScrabbleDictionaryStatus status) {
     }
 }
 
+static void update_dictionary_summary(
+    ScrabbleMainWindow *main_window,
+    const char *note) {
+    char *display_name;
+    char *message;
+
+    gtk_widget_remove_css_class(
+        main_window->dictionary_label, "dictionary-warning");
+    if (main_window->dictionary == NULL ||
+        main_window->active_dictionary_path == NULL) {
+        gtk_label_set_text(
+            GTK_LABEL(main_window->dictionary_label),
+            note == NULL ? "No dictionary loaded." : note);
+        gtk_widget_set_tooltip_text(main_window->dictionary_label, NULL);
+        gtk_widget_set_sensitive(main_window->reset_dictionary_button, FALSE);
+        if (note != NULL) {
+            gtk_widget_add_css_class(
+                main_window->dictionary_label, "dictionary-warning");
+        }
+        return;
+    }
+
+    display_name = g_filename_display_basename(
+        main_window->active_dictionary_path);
+    if (note == NULL) {
+        message = g_strdup_printf(
+            "%s: %s — %zu words",
+            main_window->using_custom_dictionary ? "Custom" : "Bundled",
+            display_name,
+            scrabble_dictionary_count(main_window->dictionary));
+    } else {
+        message = g_strdup_printf(
+            "%s: %s — %zu words. %s",
+            main_window->using_custom_dictionary ? "Custom" : "Bundled",
+            display_name,
+            scrabble_dictionary_count(main_window->dictionary),
+            note);
+        gtk_widget_add_css_class(
+            main_window->dictionary_label, "dictionary-warning");
+    }
+
+    gtk_label_set_text(GTK_LABEL(main_window->dictionary_label), message);
+    gtk_widget_set_tooltip_text(
+        main_window->dictionary_label, main_window->active_dictionary_path);
+    gtk_widget_set_sensitive(
+        main_window->reset_dictionary_button,
+        main_window->using_custom_dictionary ||
+            main_window->has_saved_dictionary_preference);
+    g_free(message);
+    g_free(display_name);
+}
+
+static ScrabbleDictionary *load_dictionary_candidate(
+    const char *path,
+    char **error_message) {
+    ScrabbleDictionaryStatus status;
+    ScrabbleDictionary *dictionary;
+
+    g_return_val_if_fail(error_message != NULL, NULL);
+    *error_message = NULL;
+    if (path == NULL || path[0] == '\0') {
+        *error_message = g_strdup("No dictionary file was selected.");
+        return NULL;
+    }
+
+    dictionary = scrabble_dictionary_load(path, &status);
+    if (dictionary == NULL) {
+        *error_message = g_strdup(dictionary_load_error(status));
+        return NULL;
+    }
+    if (scrabble_dictionary_count(dictionary) == 0) {
+        scrabble_dictionary_destroy(dictionary);
+        *error_message = g_strdup(
+            "The selected file contains no supported words.");
+        return NULL;
+    }
+
+    return dictionary;
+}
+
+static gboolean activate_dictionary(
+    ScrabbleMainWindow *main_window,
+    const char *path,
+    gboolean custom,
+    const char *note,
+    char **error_message) {
+    ScrabbleDictionary *dictionary = load_dictionary_candidate(
+        path, error_message);
+
+    if (dictionary == NULL) {
+        return FALSE;
+    }
+
+    scrabble_dictionary_destroy(main_window->dictionary);
+    main_window->dictionary = dictionary;
+    g_free(main_window->active_dictionary_path);
+    main_window->active_dictionary_path = g_strdup(path);
+    main_window->using_custom_dictionary = custom;
+    g_clear_pointer(&main_window->dictionary_error, g_free);
+    scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
+    update_dictionary_summary(main_window, note);
+    update_input_state(main_window);
+    return TRUE;
+}
+
+static void load_initial_dictionary(
+    ScrabbleMainWindow *main_window,
+    const char *resource_error) {
+    GError *settings_error = NULL;
+    char *saved_path = scrabble_settings_load_dictionary_path(
+        main_window->settings_path, &settings_error);
+    char *load_error = NULL;
+    char *fallback_note = NULL;
+
+    if (settings_error != NULL) {
+        fallback_note = g_strdup(
+            "Saved settings could not be read; using the bundled dictionary.");
+        g_clear_error(&settings_error);
+    } else if (saved_path != NULL) {
+        main_window->has_saved_dictionary_preference = TRUE;
+        if (activate_dictionary(
+                main_window, saved_path, TRUE, NULL, &load_error)) {
+            g_free(saved_path);
+            return;
+        }
+
+        fallback_note = g_strdup_printf(
+            "Saved dictionary unavailable (%s); using the bundled dictionary.",
+            load_error);
+        g_clear_pointer(&load_error, g_free);
+    }
+
+    if (main_window->bundled_dictionary_path != NULL &&
+        activate_dictionary(
+            main_window,
+            main_window->bundled_dictionary_path,
+            FALSE,
+            fallback_note,
+            &load_error)) {
+        g_free(fallback_note);
+        g_free(saved_path);
+        return;
+    }
+
+    main_window->dictionary_error = g_strdup(
+        load_error != NULL
+            ? load_error
+            : resource_error == NULL
+                ? "The bundled dictionary resource is unavailable."
+                : resource_error);
+    update_dictionary_summary(main_window, fallback_note);
+    update_input_state(main_window);
+    g_free(load_error);
+    g_free(fallback_note);
+    g_free(saved_path);
+}
+
+static void select_custom_dictionary(
+    ScrabbleMainWindow *main_window,
+    const char *path) {
+    GError *settings_error = NULL;
+    char *load_error = NULL;
+
+    if (!activate_dictionary(
+            main_window, path, TRUE, NULL, &load_error)) {
+        set_status(main_window, load_error, "status-error");
+        g_free(load_error);
+        return;
+    }
+
+    if (!scrabble_settings_save_dictionary_path(
+            main_window->settings_path, path, &settings_error)) {
+        update_dictionary_summary(
+            main_window,
+            "Loaded for this session, but the choice could not be remembered.");
+        set_status(
+            main_window,
+            settings_error == NULL
+                ? "The dictionary choice could not be remembered."
+                : settings_error->message,
+            "status-error");
+        g_clear_error(&settings_error);
+        return;
+    }
+
+    main_window->has_saved_dictionary_preference = TRUE;
+    update_dictionary_summary(main_window, NULL);
+    set_status(main_window, "Custom dictionary loaded.", "status-success");
+}
+
+static void on_dictionary_selected(
+    const char *path,
+    const GError *error,
+    gpointer user_data) {
+    GtkWindow *window = GTK_WINDOW(user_data);
+    ScrabbleMainWindow *main_window = g_object_get_data(
+        G_OBJECT(window), "scrabble-main-window");
+
+    if (main_window == NULL) {
+        return;
+    }
+    if (error != NULL) {
+        set_status(main_window, error->message, "status-error");
+        return;
+    }
+
+    select_custom_dictionary(main_window, path);
+}
+
+static void on_choose_dictionary_clicked(
+    GtkButton *button,
+    gpointer user_data) {
+    ScrabbleMainWindow *main_window = user_data;
+
+    (void)button;
+    scrabble_dictionary_picker_open(
+        GTK_WINDOW(main_window->window),
+        on_dictionary_selected,
+        g_object_ref(main_window->window),
+        g_object_unref);
+}
+
+static void on_reset_dictionary_clicked(
+    GtkButton *button,
+    gpointer user_data) {
+    ScrabbleMainWindow *main_window = user_data;
+    GError *settings_error = NULL;
+    char *load_error = NULL;
+
+    (void)button;
+    if (main_window->bundled_dictionary_path == NULL ||
+        !activate_dictionary(
+            main_window,
+            main_window->bundled_dictionary_path,
+            FALSE,
+            NULL,
+            &load_error)) {
+        set_status(
+            main_window,
+            load_error == NULL
+                ? "The bundled dictionary is unavailable."
+                : load_error,
+            "status-error");
+        g_free(load_error);
+        return;
+    }
+
+    if (!scrabble_settings_clear_dictionary_path(
+            main_window->settings_path, &settings_error)) {
+        update_dictionary_summary(
+            main_window,
+            "Restored, but the saved preference could not be cleared.");
+        set_status(
+            main_window,
+            settings_error == NULL
+                ? "The saved dictionary preference could not be cleared."
+                : settings_error->message,
+            "status-error");
+        g_clear_error(&settings_error);
+        return;
+    }
+
+    main_window->has_saved_dictionary_preference = FALSE;
+    update_dictionary_summary(main_window, NULL);
+    set_status(main_window, "Bundled dictionary restored.", "status-success");
+}
+
 static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     GtkWidget *content = gtk_box_new(GTK_ORIENTATION_VERTICAL, CONTENT_SPACING);
     GtkWidget *title = gtk_label_new("Scrabble Solver");
     GtkWidget *instructions = gtk_label_new(
         "Turn your rack into the strongest word. Use ? or * for a blank tile.");
+    GtkWidget *dictionary_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    GtkWidget *dictionary_heading = gtk_label_new("DICTIONARY");
+    GtkWidget *dictionary_controls = gtk_box_new(
+        GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget *choose_dictionary_button = gtk_button_new_with_label(
+        "Choose file");
     GtkWidget *rack_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
     GtkWidget *rack_heading = gtk_label_new("YOUR RACK");
     GtkWidget *controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
@@ -159,6 +449,9 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     main_window->solve_button = gtk_button_new_with_label("Find words");
     main_window->status_label = gtk_label_new(
         "Word suggestions will appear here in the next version.");
+    main_window->dictionary_label = gtk_label_new("Loading dictionary…");
+    main_window->reset_dictionary_button = gtk_button_new_with_label(
+        "Use bundled");
 
     gtk_widget_add_css_class(content, "app-background");
     gtk_widget_add_css_class(content, "app-content");
@@ -171,6 +464,35 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     gtk_label_set_wrap(GTK_LABEL(instructions), TRUE);
     gtk_widget_add_css_class(instructions, "app-subtitle");
     gtk_box_append(GTK_BOX(content), instructions);
+
+    gtk_widget_add_css_class(dictionary_card, "surface-card");
+    gtk_widget_add_css_class(dictionary_card, "dictionary-card");
+    gtk_widget_set_halign(dictionary_heading, GTK_ALIGN_START);
+    gtk_widget_add_css_class(dictionary_heading, "section-label");
+    gtk_box_append(GTK_BOX(dictionary_card), dictionary_heading);
+
+    gtk_widget_set_halign(main_window->dictionary_label, GTK_ALIGN_START);
+    gtk_widget_set_hexpand(main_window->dictionary_label, TRUE);
+    gtk_label_set_wrap(GTK_LABEL(main_window->dictionary_label), TRUE);
+    gtk_widget_add_css_class(
+        main_window->dictionary_label, "dictionary-label");
+    gtk_box_append(
+        GTK_BOX(dictionary_controls), main_window->dictionary_label);
+
+    gtk_widget_add_css_class(choose_dictionary_button, "secondary-button");
+    gtk_accessible_update_property(
+        GTK_ACCESSIBLE(choose_dictionary_button),
+        GTK_ACCESSIBLE_PROPERTY_LABEL, "Choose a dictionary file",
+        -1);
+    gtk_box_append(GTK_BOX(dictionary_controls), choose_dictionary_button);
+
+    gtk_widget_set_sensitive(main_window->reset_dictionary_button, FALSE);
+    gtk_widget_add_css_class(
+        main_window->reset_dictionary_button, "secondary-button");
+    gtk_box_append(
+        GTK_BOX(dictionary_controls), main_window->reset_dictionary_button);
+    gtk_box_append(GTK_BOX(dictionary_card), dictionary_controls);
+    gtk_box_append(GTK_BOX(content), dictionary_card);
 
     gtk_widget_add_css_class(rack_card, "surface-card");
     gtk_widget_set_halign(rack_heading, GTK_ALIGN_START);
@@ -232,6 +554,16 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
         "clicked",
         G_CALLBACK(on_solve_clicked),
         main_window);
+    g_signal_connect(
+        choose_dictionary_button,
+        "clicked",
+        G_CALLBACK(on_choose_dictionary_clicked),
+        main_window);
+    g_signal_connect(
+        main_window->reset_dictionary_button,
+        "clicked",
+        G_CALLBACK(on_reset_dictionary_clicked),
+        main_window);
 
     return content;
 }
@@ -242,7 +574,6 @@ void scrabble_main_window_present(
     const char *resource_error) {
     GtkWindow *active_window = gtk_application_get_active_window(application);
     ScrabbleMainWindow *main_window;
-    ScrabbleDictionaryStatus dictionary_status;
 
     if (active_window != NULL) {
         gtk_window_present(active_window);
@@ -250,19 +581,8 @@ void scrabble_main_window_present(
     }
 
     main_window = g_new0(ScrabbleMainWindow, 1);
-    if (dictionary_path != NULL) {
-        main_window->dictionary = scrabble_dictionary_load(
-            dictionary_path, &dictionary_status);
-        if (main_window->dictionary == NULL) {
-            main_window->dictionary_error = g_strdup(
-                dictionary_load_error(dictionary_status));
-        }
-    } else {
-        main_window->dictionary_error = g_strdup(
-            resource_error == NULL
-                ? "The dictionary resource is unavailable."
-                : resource_error);
-    }
+    main_window->bundled_dictionary_path = g_strdup(dictionary_path);
+    main_window->settings_path = scrabble_settings_default_path();
     main_window->window = gtk_application_window_new(application);
     g_object_set_data_full(
         G_OBJECT(main_window->window),
@@ -281,6 +601,6 @@ void scrabble_main_window_present(
         WINDOW_MINIMUM_HEIGHT);
     gtk_window_set_child(
         GTK_WINDOW(main_window->window), create_content(main_window));
-    update_input_state(main_window);
+    load_initial_dictionary(main_window, resource_error);
     gtk_window_present(GTK_WINDOW(main_window->window));
 }

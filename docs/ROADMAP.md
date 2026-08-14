@@ -17,11 +17,11 @@ Status: complete
 
 Status: in progress
 
-- Bundle and attribute a redistributable word-game dictionary.
-- Let users select and remember a local dictionary file.
-- Report dictionary source, size, and loading problems in the interface.
-- Improve search, filtering, and result navigation.
-- Define a documented import path for properly licensed word lists.
+- [x] Bundle and attribute a redistributable word-game dictionary.
+- [x] Let users select and remember a local dictionary file.
+- [x] Report dictionary source, size, and loading problems in the interface.
+- [ ] Improve search, filtering, and result navigation.
+- [x] Define a documented import path for properly licensed word lists.
 
 ## 0.3 - Board model and scoring
 

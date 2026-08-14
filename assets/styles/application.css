@@ -37,6 +37,43 @@ window {
   letter-spacing: 1.4px;
 }
 
+.dictionary-card {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.dictionary-label {
+  color: #3f554a;
+  font-size: 13px;
+}
+
+.dictionary-warning {
+  color: #8d5c1d;
+  font-weight: 700;
+}
+
+button.secondary-button {
+  min-height: 34px;
+  background: #f6f1e7;
+  border: 1px solid #b8ad98;
+  border-radius: 8px;
+  color: #315242;
+  font-weight: 700;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+button.secondary-button:hover {
+  background: #ebe4d6;
+  border-color: #8f9e92;
+}
+
+button.secondary-button:disabled {
+  background: #efebe3;
+  border-color: #d5cec1;
+  color: #9a958b;
+}
+
 .rack-preview {
   margin-top: 4px;
   margin-bottom: 6px;

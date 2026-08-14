@@ -10,6 +10,7 @@ The application currently supports:
 - `?` or `*` for blank tiles;
 - zero-point scoring for letters supplied by blanks;
 - a bundled 169,266-word North American English word-game dictionary;
+- validated custom dictionary selection with a remembered preference;
 - ranked, scrollable word suggestions; and
 - CMake build configurations for Windows and Debian.
 
@@ -34,15 +35,19 @@ ENABLE 2K is not the current NASPA Word List or Collins Scrabble Words list.
 Accepted words can therefore differ from a particular commercial game,
 tournament, region, or edition.
 
-To use another dictionary, create a UTF-8 text file containing one alphabetic
-word per line and either:
+To use another dictionary, click **Choose file** in the application and select
+a local word-list file. The app validates the file before replacing the active
+dictionary and remembers a successful selection for the next launch. Click
+**Use bundled** to return to ENABLE 2K and clear the saved preference.
 
-1. replace `assets/dictionaries/enable2k.txt`; or
-2. create `dictionaries/enable2k.txt` inside another folder and set
-   `SCRABBLE_SOLVER_DATA_DIR` to that folder before starting the application.
+The preference is stored in the platform user configuration directory:
+
+- Windows: `%LOCALAPPDATA%\scrabble-solver\settings.ini`
+- Debian: `${XDG_CONFIG_HOME:-~/.config}/scrabble-solver/settings.ini`
 
 Only words of 1–15 ASCII letters are loaded. Words are normalized to uppercase,
-invalid lines are ignored, and duplicate entries are removed.
+invalid lines are ignored, and duplicate entries are removed. A selected file
+must contain at least one supported word.
 
 ## Build on Debian
 

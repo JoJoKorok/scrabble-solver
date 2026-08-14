@@ -48,7 +48,7 @@ int scrabble_application_run(int argc, char **argv) {
     GError *resource_error = NULL;
     int status;
 
-    resources->dictionary_path = scrabble_resource_find(
+    resources->dictionary_path = scrabble_resource_find_bundled(
         argc > 0 ? argv[0] : NULL,
         SCRABBLE_DEFAULT_DICTIONARY_PATH,
         &resource_error);

@@ -11,10 +11,11 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   supported words.
 - An integration test covering the `EEOIFNX` rack against the default
   dictionary.
+- Native custom dictionary selection with validation, remembered preferences,
+  and a bundled-dictionary reset action.
 
 ### Planned
 
-- User-selectable dictionary files.
 - Full board-position representation and validation.
 - Premium-square, cross-word, and bingo scoring.
 - Ranked legal move generation.

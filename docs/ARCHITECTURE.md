@@ -28,8 +28,9 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 |---|---|
 | `include/scrabble/` | Public types and functions exposed by the core library |
 | `src/core/` | Dictionary loading, rack matching, scoring, and result ranking |
-| `src/platform/` | Runtime data discovery across development and install layouts |
+| `src/platform/` | Runtime data discovery and persisted user settings |
 | `src/ui/application.*` | GTK lifecycle and application-scoped resources |
+| `src/ui/dictionary_picker.*` | Version-compatible native file selection |
 | `src/ui/main_window.*` | Main workflow and coordination between UI and core |
 | `src/ui/rack_view.*` | Visual representation of the seven-tile rack |
 | `src/ui/result_list.*` | Rendering solver results without solving them |
@@ -51,20 +52,25 @@ global state:
 - Application and window state are attached to their GTK owners with
   destruction callbacks.
 
-## Resource discovery
+## Resource discovery and settings
 
-Dictionary data is searched in this order:
+The bundled dictionary is searched for in this order:
 
-1. `SCRABBLE_SOLVER_DATA_DIR` when explicitly set;
-2. a portable `data/` folder beside the executable;
-3. `../share/scrabble-solver/` relative to the executable;
-4. the configured installation data directory; and
-5. the source-tree `assets/` directory for development builds.
+1. a portable `data/` folder beside the executable;
+2. `../share/scrabble-solver/` relative to the executable;
+3. the configured installation data directory; and
+4. the source-tree `assets/` directory for development builds.
 
-Bundled presentation resources such as the stylesheet can ignore an incomplete
-dictionary override and fall back to normal application locations. This lets
-the interface continue displaying a readable error state when custom data is
-misconfigured.
+The main window first tries a custom dictionary path saved in the platform
+user configuration directory. It validates the file before replacing the
+active dictionary and falls back to the bundled dictionary if the saved file
+is unavailable or invalid. The platform settings API accepts an explicit file
+path so its persistence behavior can be tested without modifying real user
+preferences.
+
+Presentation resources such as the stylesheet are resolved independently of
+the saved dictionary path. This lets the interface continue displaying a
+readable error state when custom dictionary data is misconfigured.
 
 ## Adding a core feature
 
