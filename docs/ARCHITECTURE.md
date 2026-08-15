@@ -15,6 +15,7 @@ GTK application
 scrabble_core
     ├── board
     ├── dictionary
+    ├── move
     ├── rack
     ├── scoring
     ├── solver
@@ -28,7 +29,7 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 | Area | Responsibility |
 |---|---|
 | `include/scrabble/` | Public types and functions exposed by the core library |
-| `src/core/` | Board state, dictionary loading, rack matching, scoring, and result ranking |
+| `src/core/` | Board and move state, dictionary loading, rack matching, scoring, and result ranking |
 | `src/platform/` | Runtime data discovery and persisted user settings |
 | `src/ui/application.*` | GTK lifecycle and application-scoped resources |
 | `src/ui/dictionary_picker.*` | Version-compatible native file selection |
@@ -112,7 +113,6 @@ Full board solving should be introduced as additional core modules rather than
 being added to `main_window.c`. Likely boundaries include:
 
 - premium-square layout;
-- move representation;
 - cross-check generation;
 - move validation;
 - board-aware scoring; and

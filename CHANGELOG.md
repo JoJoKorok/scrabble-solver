@@ -17,6 +17,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   that keep rack searches responsive as dictionary support grows.
 - A portable 15-by-15 board model with coordinate, tile, blank, center-square,
   and reset support for future move generation.
+- A compact board-move representation with horizontal and vertical geometry,
+  rack-versus-board tile tracking, and blank-tile identity.
 
 ### Planned
 
