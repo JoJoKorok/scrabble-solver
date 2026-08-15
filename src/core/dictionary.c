@@ -234,6 +234,33 @@ const char *scrabble_dictionary_word_at(
     return dictionary->words[index];
 }
 
+int scrabble_dictionary_contains(
+    const ScrabbleDictionary *dictionary,
+    const char *word) {
+    char normalized[SCRABBLE_MAX_WORD_LENGTH + 1];
+    size_t length;
+
+    if (dictionary == NULL || word == NULL || dictionary->count == 0) {
+        return 0;
+    }
+
+    length = strlen(word);
+    if (length > SCRABBLE_MAX_WORD_LENGTH) {
+        return 0;
+    }
+
+    memcpy(normalized, word, length + 1);
+    if (!normalize_word(normalized)) {
+        return 0;
+    }
+
+    return bsearch(normalized,
+                   dictionary->words,
+                   dictionary->count,
+                   sizeof(*dictionary->words),
+                   compare_words) != NULL;
+}
+
 size_t scrabble_dictionary_candidate_count(
     const ScrabbleDictionary *dictionary,
     size_t max_length) {

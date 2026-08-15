@@ -19,6 +19,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   and reset support for future move generation.
 - A compact board-move representation with horizontal and vertical geometry,
   rack-versus-board tile tracking, and blank-tile identity.
+- Atomic opening-move validation and application covering the center square,
+  dictionary membership, rack letters, and blank assignment.
 
 ### Planned
 

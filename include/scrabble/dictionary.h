@@ -29,4 +29,10 @@ const char *scrabble_dictionary_word_at(
     const ScrabbleDictionary *dictionary,
     size_t index);
 
+/* Returns 1 when word is present. Lookup is case-insensitive for supported
+   ASCII letters and returns 0 for invalid input. */
+int scrabble_dictionary_contains(
+    const ScrabbleDictionary *dictionary,
+    const char *word);
+
 #endif

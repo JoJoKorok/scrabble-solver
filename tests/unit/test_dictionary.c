@@ -59,10 +59,29 @@ static int indexes_rack_length_candidates(void) {
     return 0;
 }
 
+static int checks_word_membership(void) {
+    ScrabbleDictionaryStatus status;
+    ScrabbleDictionary *dictionary = scrabble_dictionary_load(
+        SCRABBLE_DICTIONARY_FIXTURE, &status);
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT_INT(SCRABBLE_DICTIONARY_OK, status);
+    TEST_ASSERT(scrabble_dictionary_contains(dictionary, "APPLE"));
+    TEST_ASSERT(scrabble_dictionary_contains(dictionary, "quiz"));
+    TEST_ASSERT(!scrabble_dictionary_contains(dictionary, "PEAR"));
+    TEST_ASSERT(!scrabble_dictionary_contains(dictionary, "CAN'T"));
+    TEST_ASSERT(!scrabble_dictionary_contains(dictionary, ""));
+    TEST_ASSERT(!scrabble_dictionary_contains(dictionary, NULL));
+    TEST_ASSERT(!scrabble_dictionary_contains(NULL, "APPLE"));
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
 static const ScrabbleTestCase TESTS[] = {
     {"loads, normalizes, and deduplicates", loads_normalizes_and_deduplicates},
     {"reports load errors", reports_load_errors},
-    {"indexes rack-length candidates", indexes_rack_length_candidates}
+    {"indexes rack-length candidates", indexes_rack_length_candidates},
+    {"checks word membership", checks_word_membership}
 };
 
 TEST_MAIN(TESTS)

@@ -29,6 +29,7 @@ add_scrabble_test(test_scoring unit/test_scoring.c)
 add_scrabble_test(test_rack unit/test_rack.c)
 add_scrabble_test(test_board unit/test_board.c)
 add_scrabble_test(test_move unit/test_move.c)
+add_scrabble_test(test_placement unit/test_placement.c)
 add_scrabble_test(test_dictionary unit/test_dictionary.c)
 target_include_directories(test_dictionary PRIVATE
   ${PROJECT_SOURCE_DIR}/src/core
