@@ -116,10 +116,9 @@ dictionary, or scoring rules. Visual values belong in
 Full board solving should be introduced as additional core modules rather than
 being added to `main_window.c`. Likely boundaries include:
 
-- premium-square layout;
 - cross-check generation;
 - connected-move validation;
-- board-aware scoring; and
+- cross-word and connected-move scoring; and
 - candidate generation and ranking.
 
 These modules can build on the current dictionary, rack, and scoring APIs while

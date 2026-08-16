@@ -6,9 +6,9 @@
 
 struct ScrabbleGame {
     ScrabbleBoard *board;
-    ScrabbleMove *moves;
+    ScrabbleGameTurn *turns;
     size_t move_count;
-    size_t move_capacity;
+    size_t turn_capacity;
 };
 
 static void set_placement_status(
@@ -19,35 +19,35 @@ static void set_placement_status(
     }
 }
 
-static int reserve_move(ScrabbleGame *game) {
+static int reserve_turn(ScrabbleGame *game) {
     size_t new_capacity;
-    void *new_moves;
+    void *new_turns;
 
-    if (game->move_count < game->move_capacity) {
+    if (game->move_count < game->turn_capacity) {
         return 1;
     }
 
-    if (game->move_capacity > SIZE_MAX / 2) {
+    if (game->turn_capacity > SIZE_MAX / 2) {
         return 0;
     }
 
-    new_capacity = game->move_capacity == 0 ? 16 : game->move_capacity * 2;
-    if (new_capacity > SIZE_MAX / sizeof(*game->moves)) {
+    new_capacity = game->turn_capacity == 0 ? 16 : game->turn_capacity * 2;
+    if (new_capacity > SIZE_MAX / sizeof(*game->turns)) {
         return 0;
     }
 
-    new_moves = realloc(game->moves, new_capacity * sizeof(*game->moves));
-    if (new_moves == NULL) {
+    new_turns = realloc(game->turns, new_capacity * sizeof(*game->turns));
+    if (new_turns == NULL) {
         return 0;
     }
 
-    game->moves = new_moves;
-    game->move_capacity = new_capacity;
+    game->turns = new_turns;
+    game->turn_capacity = new_capacity;
     return 1;
 }
 
 static int last_move_matches_board(const ScrabbleGame *game) {
-    const ScrabbleMove *move = &game->moves[game->move_count - 1];
+    const ScrabbleMove *move = &game->turns[game->move_count - 1].move;
 
     for (size_t index = 0; index < move->length; ++index) {
         ScrabbleMoveTile tile;
@@ -106,7 +106,7 @@ ScrabbleGame *scrabble_game_create(void) {
 void scrabble_game_destroy(ScrabbleGame *game) {
     if (game != NULL) {
         scrabble_board_destroy(game->board);
-        free(game->moves);
+        free(game->turns);
         free(game);
     }
 }
@@ -133,7 +133,17 @@ const ScrabbleMove *scrabble_game_move_at(
         return NULL;
     }
 
-    return &game->moves[index];
+    return &game->turns[index].move;
+}
+
+const ScrabbleGameTurn *scrabble_game_turn_at(
+    const ScrabbleGame *game,
+    size_t index) {
+    if (game == NULL || index >= game->move_count) {
+        return NULL;
+    }
+
+    return &game->turns[index];
 }
 
 ScrabbleGameStatus scrabble_game_apply_opening_move(
@@ -146,6 +156,7 @@ ScrabbleGameStatus scrabble_game_apply_opening_move(
     ScrabbleMove proposal;
     ScrabbleMove validated;
     ScrabbleMove applied;
+    ScrabbleMoveScore score;
     ScrabblePlacementStatus status;
 
     if (move != NULL) {
@@ -169,7 +180,12 @@ ScrabbleGameStatus scrabble_game_apply_opening_move(
         return SCRABBLE_GAME_PLACEMENT_REJECTED;
     }
 
-    if (!reserve_move(game)) {
+    if (scrabble_score_opening_move(&validated, &score) !=
+        SCRABBLE_SCORING_OK) {
+        return SCRABBLE_GAME_BOARD_STATE_ERROR;
+    }
+
+    if (!reserve_turn(game)) {
         return SCRABBLE_GAME_OUT_OF_MEMORY;
     }
 
@@ -180,7 +196,9 @@ ScrabbleGameStatus scrabble_game_apply_opening_move(
         return SCRABBLE_GAME_BOARD_STATE_ERROR;
     }
 
-    game->moves[game->move_count++] = applied;
+    game->turns[game->move_count].move = applied;
+    game->turns[game->move_count].score = score;
+    ++game->move_count;
     if (applied_move != NULL) {
         *applied_move = applied;
     }
@@ -208,7 +226,7 @@ ScrabbleGameStatus scrabble_game_undo_last_move(
         return SCRABBLE_GAME_BOARD_STATE_ERROR;
     }
 
-    move = &game->moves[game->move_count - 1];
+    move = &game->turns[game->move_count - 1].move;
     for (size_t index = 0; index < move->length; ++index) {
         ScrabbleMoveTile tile;
 

@@ -6,10 +6,16 @@
 #include "scrabble/move.h"
 #include "scrabble/placement.h"
 #include "scrabble/rack.h"
+#include "scrabble/scoring.h"
 
 #include <stddef.h>
 
 typedef struct ScrabbleGame ScrabbleGame;
+
+typedef struct {
+    ScrabbleMove move;
+    ScrabbleMoveScore score;
+} ScrabbleGameTurn;
 
 typedef enum {
     SCRABBLE_GAME_OK = 0,
@@ -27,11 +33,14 @@ void scrabble_game_destroy(ScrabbleGame *game);
 /* Clears the board and history for a new game. */
 void scrabble_game_reset(ScrabbleGame *game);
 
-/* The returned board and moves remain owned by the game and must not be
-   modified or released by the caller. */
+/* The returned board and history entries remain owned by the game and must
+   not be modified or released by the caller. */
 const ScrabbleBoard *scrabble_game_board(const ScrabbleGame *game);
 size_t scrabble_game_move_count(const ScrabbleGame *game);
 const ScrabbleMove *scrabble_game_move_at(
+    const ScrabbleGame *game,
+    size_t index);
+const ScrabbleGameTurn *scrabble_game_turn_at(
     const ScrabbleGame *game,
     size_t index);
 

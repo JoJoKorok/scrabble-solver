@@ -119,6 +119,45 @@ static int removes_tiles_and_reports_empty_cells(void) {
     return 0;
 }
 
+static int exposes_the_standard_premium_layout(void) {
+    size_t premium_counts[5] = {0};
+    ScrabbleBoardPremium premium;
+
+    for (size_t row = 0; row < SCRABBLE_BOARD_SIZE; ++row) {
+        for (size_t column = 0; column < SCRABBLE_BOARD_SIZE; ++column) {
+            TEST_ASSERT_INT(
+                SCRABBLE_BOARD_OK,
+                scrabble_board_get_premium(
+                    position(row, column), &premium));
+            ++premium_counts[premium];
+        }
+    }
+
+    TEST_ASSERT_INT(164, premium_counts[SCRABBLE_BOARD_PREMIUM_NONE]);
+    TEST_ASSERT_INT(24, premium_counts[SCRABBLE_BOARD_DOUBLE_LETTER]);
+    TEST_ASSERT_INT(12, premium_counts[SCRABBLE_BOARD_TRIPLE_LETTER]);
+    TEST_ASSERT_INT(17, premium_counts[SCRABBLE_BOARD_DOUBLE_WORD]);
+    TEST_ASSERT_INT(8, premium_counts[SCRABBLE_BOARD_TRIPLE_WORD]);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_premium(position(7, 7), &premium));
+    TEST_ASSERT_INT(SCRABBLE_BOARD_DOUBLE_WORD, premium);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_premium(position(7, 3), &premium));
+    TEST_ASSERT_INT(SCRABBLE_BOARD_DOUBLE_LETTER, premium);
+
+    premium = SCRABBLE_BOARD_TRIPLE_WORD;
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OUT_OF_BOUNDS,
+        scrabble_board_get_premium(position(15, 0), &premium));
+    TEST_ASSERT_INT(SCRABBLE_BOARD_PREMIUM_NONE, premium);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_INVALID_ARGUMENT,
+        scrabble_board_get_premium(position(0, 0), NULL));
+    return 0;
+}
+
 static int validates_arguments_positions_and_letters(void) {
     ScrabbleBoard *board = scrabble_board_create();
     ScrabbleBoardCell cell;
@@ -164,6 +203,8 @@ static const ScrabbleTestCase TESTS[] = {
     {"clears a populated board", clears_a_populated_board},
     {"removes tiles and reports empty cells",
      removes_tiles_and_reports_empty_cells},
+    {"exposes the standard premium layout",
+     exposes_the_standard_premium_layout},
     {"validates arguments, positions, and letters",
      validates_arguments_positions_and_letters}
 };

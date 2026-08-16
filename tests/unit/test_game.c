@@ -34,6 +34,7 @@ static int creates_and_resets_game_state(void) {
     TEST_ASSERT(scrabble_game_board(NULL) == NULL);
     TEST_ASSERT_INT(0, scrabble_game_move_count(NULL));
     TEST_ASSERT(scrabble_game_move_at(NULL, 0) == NULL);
+    TEST_ASSERT(scrabble_game_turn_at(NULL, 0) == NULL);
     scrabble_game_reset(NULL);
     scrabble_game_destroy(NULL);
     scrabble_game_destroy(game);
@@ -49,6 +50,7 @@ static int records_and_undoes_an_opening_move(void) {
     ScrabbleMove undone;
     ScrabblePlacementStatus placement_status;
     const ScrabbleMove *recorded;
+    const ScrabbleGameTurn *turn;
 
     TEST_ASSERT(dictionary != NULL);
     TEST_ASSERT(game != NULL);
@@ -75,6 +77,11 @@ static int records_and_undoes_an_opening_move(void) {
     TEST_ASSERT(recorded != NULL);
     TEST_ASSERT_STRING("RETAINS", recorded->word);
     TEST_ASSERT_INT(applied.blank_tile_mask, recorded->blank_tile_mask);
+    turn = scrabble_game_turn_at(game, 0);
+    TEST_ASSERT(turn != NULL);
+    TEST_ASSERT_STRING("RETAINS", turn->move.word);
+    TEST_ASSERT_INT(62, turn->score.total_score);
+    TEST_ASSERT(scrabble_game_turn_at(game, 1) == NULL);
 
     TEST_ASSERT_INT(
         SCRABBLE_GAME_OK,

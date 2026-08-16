@@ -55,6 +55,94 @@ int scrabble_board_position_is_center(ScrabbleBoardPosition position) {
            position.column == SCRABBLE_BOARD_CENTER_INDEX;
 }
 
+static int is_triple_word_position(ScrabbleBoardPosition position) {
+    int row_is_edge_or_middle = position.row == 0 || position.row == 7 ||
+                                position.row == 14;
+    int column_is_edge_or_middle = position.column == 0 ||
+                                   position.column == 7 ||
+                                   position.column == 14;
+
+    return row_is_edge_or_middle && column_is_edge_or_middle &&
+           !scrabble_board_position_is_center(position);
+}
+
+static int is_double_word_position(ScrabbleBoardPosition position) {
+    size_t row = position.row;
+    size_t column = position.column;
+    int is_inner_diagonal =
+        (row >= 1 && row <= 4) || (row >= 10 && row <= 13);
+
+    return scrabble_board_position_is_center(position) ||
+           (is_inner_diagonal &&
+            (row == column || row + column == SCRABBLE_BOARD_SIZE - 1));
+}
+
+static int is_triple_letter_position(ScrabbleBoardPosition position) {
+    size_t row = position.row;
+    size_t column = position.column;
+
+    if (row == 1 || row == 13) {
+        return column == 5 || column == 9;
+    }
+
+    if (row == 5 || row == 9) {
+        return column == 1 || column == 5 || column == 9 || column == 13;
+    }
+
+    return 0;
+}
+
+static int is_double_letter_position(ScrabbleBoardPosition position) {
+    size_t row = position.row;
+    size_t column = position.column;
+
+    if (row == 0 || row == 14) {
+        return column == 3 || column == 11;
+    }
+    if (row == 2 || row == 12) {
+        return column == 6 || column == 8;
+    }
+    if (row == 3 || row == 11) {
+        return column == 0 || column == 7 || column == 14;
+    }
+    if (row == 6 || row == 8) {
+        return column == 2 || column == 6 || column == 8 || column == 12;
+    }
+    if (row == 7) {
+        return column == 3 || column == 11;
+    }
+
+    return 0;
+}
+
+ScrabbleBoardStatus scrabble_board_get_premium(
+    ScrabbleBoardPosition position,
+    ScrabbleBoardPremium *premium) {
+    if (premium != NULL) {
+        *premium = SCRABBLE_BOARD_PREMIUM_NONE;
+    }
+
+    if (premium == NULL) {
+        return SCRABBLE_BOARD_INVALID_ARGUMENT;
+    }
+
+    if (!scrabble_board_position_is_valid(position)) {
+        return SCRABBLE_BOARD_OUT_OF_BOUNDS;
+    }
+
+    if (is_triple_word_position(position)) {
+        *premium = SCRABBLE_BOARD_TRIPLE_WORD;
+    } else if (is_double_word_position(position)) {
+        *premium = SCRABBLE_BOARD_DOUBLE_WORD;
+    } else if (is_triple_letter_position(position)) {
+        *premium = SCRABBLE_BOARD_TRIPLE_LETTER;
+    } else if (is_double_letter_position(position)) {
+        *premium = SCRABBLE_BOARD_DOUBLE_LETTER;
+    }
+
+    return SCRABBLE_BOARD_OK;
+}
+
 ScrabbleBoardStatus scrabble_board_get_cell(
     const ScrabbleBoard *board,
     ScrabbleBoardPosition position,

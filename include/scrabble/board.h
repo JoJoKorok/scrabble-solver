@@ -21,6 +21,14 @@ typedef struct {
 } ScrabbleBoardCell;
 
 typedef enum {
+    SCRABBLE_BOARD_PREMIUM_NONE = 0,
+    SCRABBLE_BOARD_DOUBLE_LETTER,
+    SCRABBLE_BOARD_TRIPLE_LETTER,
+    SCRABBLE_BOARD_DOUBLE_WORD,
+    SCRABBLE_BOARD_TRIPLE_WORD
+} ScrabbleBoardPremium;
+
+typedef enum {
     SCRABBLE_BOARD_OK = 0,
     SCRABBLE_BOARD_INVALID_ARGUMENT,
     SCRABBLE_BOARD_OUT_OF_BOUNDS,
@@ -41,6 +49,11 @@ int scrabble_board_is_empty(const ScrabbleBoard *board);
 
 int scrabble_board_position_is_valid(ScrabbleBoardPosition position);
 int scrabble_board_position_is_center(ScrabbleBoardPosition position);
+
+/* Returns the permanent premium at a board position. */
+ScrabbleBoardStatus scrabble_board_get_premium(
+    ScrabbleBoardPosition position,
+    ScrabbleBoardPremium *premium);
 
 /* Copies a cell into cell. The output is cleared when the lookup fails. */
 ScrabbleBoardStatus scrabble_board_get_cell(
