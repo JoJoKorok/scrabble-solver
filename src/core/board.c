@@ -105,3 +105,34 @@ ScrabbleBoardStatus scrabble_board_place_tile(
     ++board->tile_count;
     return SCRABBLE_BOARD_OK;
 }
+
+ScrabbleBoardStatus scrabble_board_remove_tile(
+    ScrabbleBoard *board,
+    ScrabbleBoardPosition position,
+    ScrabbleBoardCell *removed_cell) {
+    ScrabbleBoardCell *cell;
+
+    if (removed_cell != NULL) {
+        memset(removed_cell, 0, sizeof(*removed_cell));
+    }
+
+    if (board == NULL) {
+        return SCRABBLE_BOARD_INVALID_ARGUMENT;
+    }
+
+    if (!scrabble_board_position_is_valid(position)) {
+        return SCRABBLE_BOARD_OUT_OF_BOUNDS;
+    }
+
+    cell = &board->cells[position.row][position.column];
+    if (cell->letter == '\0') {
+        return SCRABBLE_BOARD_CELL_EMPTY;
+    }
+
+    if (removed_cell != NULL) {
+        *removed_cell = *cell;
+    }
+    memset(cell, 0, sizeof(*cell));
+    --board->tile_count;
+    return SCRABBLE_BOARD_OK;
+}

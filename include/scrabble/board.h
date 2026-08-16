@@ -25,7 +25,8 @@ typedef enum {
     SCRABBLE_BOARD_INVALID_ARGUMENT,
     SCRABBLE_BOARD_OUT_OF_BOUNDS,
     SCRABBLE_BOARD_INVALID_LETTER,
-    SCRABBLE_BOARD_CELL_OCCUPIED
+    SCRABBLE_BOARD_CELL_OCCUPIED,
+    SCRABBLE_BOARD_CELL_EMPTY
 } ScrabbleBoardStatus;
 
 /* Creates an owned, empty board. Returns NULL when allocation fails. */
@@ -54,5 +55,12 @@ ScrabbleBoardStatus scrabble_board_place_tile(
     ScrabbleBoardPosition position,
     char letter,
     int is_blank);
+
+/* Removes one tile. removed_cell may be NULL; otherwise it receives the
+   removed letter and blank identity, or is cleared when removal fails. */
+ScrabbleBoardStatus scrabble_board_remove_tile(
+    ScrabbleBoard *board,
+    ScrabbleBoardPosition position,
+    ScrabbleBoardCell *removed_cell);
 
 #endif

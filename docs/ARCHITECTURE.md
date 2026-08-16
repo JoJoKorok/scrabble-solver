@@ -15,6 +15,7 @@ GTK application
 scrabble_core
     ├── board
     ├── dictionary
+    ├── game
     ├── move
     ├── placement
     ├── rack
@@ -30,7 +31,7 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 | Area | Responsibility |
 |---|---|
 | `include/scrabble/` | Public types and functions exposed by the core library |
-| `src/core/` | Board state, move placement, dictionary loading, rack matching, scoring, and result ranking |
+| `src/core/` | Game and board state, move placement, dictionary loading, rack matching, scoring, and ranking |
 | `src/platform/` | Runtime data discovery and persisted user settings |
 | `src/ui/application.*` | GTK lifecycle and application-scoped resources |
 | `src/ui/dictionary_picker.*` | Version-compatible native file selection |
@@ -50,6 +51,8 @@ global state:
   `scrabble_dictionary_destroy()`.
 - `scrabble_board_create()` returns an owned board. Release it with
   `scrabble_board_destroy()`.
+- `scrabble_game_create()` returns an owned game containing its board and move
+  history. Release it with `scrabble_game_destroy()`.
 - `scrabble_solve()` fills an owned result set. Release it with
   `scrabble_result_set_destroy()`.
 - `scrabble_resource_find()` and `scrabble_resource_find_bundled()` return

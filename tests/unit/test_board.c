@@ -87,6 +87,38 @@ static int clears_a_populated_board(void) {
     return 0;
 }
 
+static int removes_tiles_and_reports_empty_cells(void) {
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleBoardCell removed;
+
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(2, 3), 'e', 1));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_remove_tile(board, position(2, 3), &removed));
+    TEST_ASSERT_INT('E', removed.letter);
+    TEST_ASSERT_INT(1, removed.is_blank);
+    TEST_ASSERT(scrabble_board_is_empty(board));
+
+    memset(&removed, 0xFF, sizeof(removed));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_CELL_EMPTY,
+        scrabble_board_remove_tile(board, position(2, 3), &removed));
+    TEST_ASSERT_INT('\0', removed.letter);
+    TEST_ASSERT_INT(0, removed.is_blank);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OUT_OF_BOUNDS,
+        scrabble_board_remove_tile(board, position(15, 0), NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_INVALID_ARGUMENT,
+        scrabble_board_remove_tile(NULL, position(0, 0), NULL));
+
+    scrabble_board_destroy(board);
+    return 0;
+}
+
 static int validates_arguments_positions_and_letters(void) {
     ScrabbleBoard *board = scrabble_board_create();
     ScrabbleBoardCell cell;
@@ -130,6 +162,8 @@ static const ScrabbleTestCase TESTS[] = {
     {"creates an empty board", creates_an_empty_board},
     {"places normal and blank tiles", places_normal_and_blank_tiles},
     {"clears a populated board", clears_a_populated_board},
+    {"removes tiles and reports empty cells",
+     removes_tiles_and_reports_empty_cells},
     {"validates arguments, positions, and letters",
      validates_arguments_positions_and_letters}
 };
