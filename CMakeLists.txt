@@ -55,6 +55,7 @@ if(SCRABBLE_BUILD_GUI)
   add_executable(scrabble_solver WIN32
     src/main.c
     src/ui/application.c
+    src/ui/board_view.c
     src/ui/dictionary_picker.c
     src/ui/main_window.c
     src/ui/rack_view.c

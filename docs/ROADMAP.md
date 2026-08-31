@@ -25,12 +25,13 @@ Status: in progress
 
 ## 0.3 - Board model and scoring
 
-Status: planned
+Status: in progress
 
-- Represent the 15-by-15 board and premium-square layout in the core.
-- Validate tile placement, connectivity, and formed cross-words.
-- Score main words, cross-words, premiums, blanks, and seven-tile bingos.
-- Add deterministic unit tests for board rules before expanding the UI.
+- [x] Represent the 15-by-15 board and premium-square layout in the core.
+- [x] Display an accessible, selectable board in the desktop interface.
+- [ ] Validate tile placement, connectivity, and formed cross-words.
+- [ ] Score main words, cross-words, premiums, blanks, and seven-tile bingos.
+- [x] Add deterministic unit tests for completed board rules.
 
 ## 0.4 - Full move generation
 

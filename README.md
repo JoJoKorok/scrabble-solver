@@ -11,12 +11,14 @@ The application currently supports:
 - zero-point scoring for letters supplied by blanks;
 - a bundled 169,266-word North American English word-game dictionary;
 - validated custom dictionary selection with a remembered preference;
-- ranked, scrollable word suggestions; and
+- ranked, scrollable word suggestions;
+- a selectable 15-by-15 board displaying the standard premium layout; and
 - CMake build configurations for Windows and Debian.
 
-This is currently a **rack solver**, not a full board-position solver. Board
-placement, premium squares, cross-words, and move generation are planned for
-later development.
+This is currently a **rack solver with an in-progress board workflow**, not yet
+a full board-position solver. The core can represent and score a validated
+opening move, while board entry, connected cross-words, and legal move
+generation are still being developed.
 
 The current development version is **0.1.0**. See [CHANGELOG.md](CHANGELOG.md)
 for milestone details and [docs/ROADMAP.md](docs/ROADMAP.md) for the planned

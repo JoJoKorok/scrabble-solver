@@ -34,6 +34,7 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 | `src/core/` | Game and board state, move placement, dictionary loading, rack matching, scoring, and ranking |
 | `src/platform/` | Runtime data discovery and persisted user settings |
 | `src/ui/application.*` | GTK lifecycle and application-scoped resources |
+| `src/ui/board_view.*` | Selectable rendering of board cells, premiums, and tiles |
 | `src/ui/dictionary_picker.*` | Version-compatible native file selection |
 | `src/ui/main_window.*` | Main workflow and coordination between UI and core |
 | `src/ui/rack_view.*` | Visual representation of the seven-tile rack |
@@ -110,6 +111,11 @@ Reusable GTK components belong in their own `src/ui/<component>.c` and `.h`
 pair. Components may format core data, but they should not reimplement rack,
 dictionary, or scoring rules. Visual values belong in
 `assets/styles/application.css` rather than scattered through C source.
+
+The board view copies cell values from a caller-owned `ScrabbleBoard` when it
+is refreshed. It does not retain or modify the core board. Selection is UI
+state, exposed through the component API so move-entry controls can coordinate
+with it without knowing how the grid is rendered.
 
 ## Future boundaries
 

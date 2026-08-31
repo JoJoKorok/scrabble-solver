@@ -2,22 +2,25 @@
 
 #include "platform/settings.h"
 #include "scrabble/dictionary.h"
+#include "scrabble/game.h"
 #include "scrabble/rack.h"
 #include "scrabble/solver.h"
+#include "ui/board_view.h"
 #include "ui/dictionary_picker.h"
 #include "ui/rack_view.h"
 #include "ui/result_list.h"
 
 enum {
-    WINDOW_DEFAULT_WIDTH = 760,
-    WINDOW_DEFAULT_HEIGHT = 680,
-    WINDOW_MINIMUM_WIDTH = 520,
-    WINDOW_MINIMUM_HEIGHT = 480,
+    WINDOW_DEFAULT_WIDTH = 1180,
+    WINDOW_DEFAULT_HEIGHT = 820,
+    WINDOW_MINIMUM_WIDTH = 900,
+    WINDOW_MINIMUM_HEIGHT = 620,
     CONTENT_SPACING = 18
 };
 
 typedef struct {
     GtkWidget *window;
+    GtkWidget *board_view;
     GtkWidget *rack_entry;
     GtkWidget *rack_view;
     GtkWidget *solve_button;
@@ -25,6 +28,7 @@ typedef struct {
     GtkWidget *result_list;
     GtkWidget *dictionary_label;
     GtkWidget *reset_dictionary_button;
+    ScrabbleGame *game;
     ScrabbleDictionary *dictionary;
     char *dictionary_error;
     char *bundled_dictionary_path;
@@ -141,6 +145,7 @@ static void on_solve_clicked(GtkButton *button, gpointer user_data) {
 static void destroy_main_window(gpointer data) {
     ScrabbleMainWindow *main_window = data;
 
+    scrabble_game_destroy(main_window->game);
     scrabble_dictionary_destroy(main_window->dictionary);
     g_free(main_window->dictionary_error);
     g_free(main_window->bundled_dictionary_path);
@@ -433,13 +438,22 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     GtkWidget *content = gtk_box_new(GTK_ORIENTATION_VERTICAL, CONTENT_SPACING);
     GtkWidget *title = gtk_label_new("Scrabble Solver");
     GtkWidget *instructions = gtk_label_new(
-        "Turn your rack into the strongest word. Use ? or * for a blank tile.");
+        "Build the board as you play, then turn your rack into the strongest move.");
     GtkWidget *dictionary_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     GtkWidget *dictionary_heading = gtk_label_new("DICTIONARY");
     GtkWidget *dictionary_controls = gtk_box_new(
         GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *choose_dictionary_button = gtk_button_new_with_label(
         "Choose file");
+    GtkWidget *workspace = gtk_box_new(
+        GTK_ORIENTATION_HORIZONTAL, CONTENT_SPACING);
+    GtkWidget *board_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    GtkWidget *board_heading = gtk_label_new("GAME BOARD");
+    GtkWidget *board_note = gtk_label_new(
+        "Select a square to prepare the starting position. Move entry is the next step.");
+    GtkWidget *board_scroll = gtk_scrolled_window_new();
+    GtkWidget *sidebar = gtk_box_new(
+        GTK_ORIENTATION_VERTICAL, CONTENT_SPACING);
     GtkWidget *rack_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
     GtkWidget *rack_heading = gtk_label_new("YOUR RACK");
     GtkWidget *controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
@@ -494,6 +508,48 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     gtk_box_append(GTK_BOX(dictionary_card), dictionary_controls);
     gtk_box_append(GTK_BOX(content), dictionary_card);
 
+    gtk_widget_set_hexpand(workspace, TRUE);
+    gtk_widget_set_vexpand(workspace, TRUE);
+
+    gtk_widget_add_css_class(board_card, "surface-card");
+    gtk_widget_add_css_class(board_card, "board-card");
+    gtk_widget_set_hexpand(board_card, TRUE);
+    gtk_widget_set_vexpand(board_card, TRUE);
+    gtk_widget_set_halign(board_heading, GTK_ALIGN_START);
+    gtk_widget_add_css_class(board_heading, "section-label");
+    gtk_box_append(GTK_BOX(board_card), board_heading);
+
+    gtk_widget_set_halign(board_note, GTK_ALIGN_START);
+    gtk_label_set_wrap(GTK_LABEL(board_note), TRUE);
+    gtk_widget_add_css_class(board_note, "board-note");
+    gtk_box_append(GTK_BOX(board_card), board_note);
+
+    main_window->board_view = scrabble_board_view_new();
+    scrabble_board_view_set_board(
+        main_window->board_view,
+        main_window->game == NULL
+            ? NULL
+            : scrabble_game_board(main_window->game));
+    gtk_widget_set_vexpand(board_scroll, TRUE);
+    gtk_widget_add_css_class(board_scroll, "board-scroll");
+    gtk_scrolled_window_set_policy(
+        GTK_SCROLLED_WINDOW(board_scroll),
+        GTK_POLICY_AUTOMATIC,
+        GTK_POLICY_AUTOMATIC);
+    gtk_scrolled_window_set_min_content_width(
+        GTK_SCROLLED_WINDOW(board_scroll), 480);
+    gtk_scrolled_window_set_min_content_height(
+        GTK_SCROLLED_WINDOW(board_scroll), 440);
+    gtk_scrolled_window_set_child(
+        GTK_SCROLLED_WINDOW(board_scroll), main_window->board_view);
+    gtk_box_append(GTK_BOX(board_card), board_scroll);
+    gtk_box_append(GTK_BOX(workspace), board_card);
+
+    gtk_widget_set_size_request(sidebar, 350, -1);
+    gtk_widget_set_vexpand(sidebar, TRUE);
+    gtk_box_append(GTK_BOX(workspace), sidebar);
+    gtk_box_append(GTK_BOX(content), workspace);
+
     gtk_widget_add_css_class(rack_card, "surface-card");
     gtk_widget_set_halign(rack_heading, GTK_ALIGN_START);
     gtk_widget_add_css_class(rack_heading, "section-label");
@@ -522,11 +578,11 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     gtk_label_set_wrap(GTK_LABEL(main_window->status_label), TRUE);
     gtk_widget_add_css_class(main_window->status_label, "status-label");
     gtk_box_append(GTK_BOX(rack_card), main_window->status_label);
-    gtk_box_append(GTK_BOX(content), rack_card);
+    gtk_box_append(GTK_BOX(sidebar), rack_card);
 
     gtk_widget_set_halign(results_heading, GTK_ALIGN_START);
     gtk_widget_add_css_class(results_heading, "section-label");
-    gtk_box_append(GTK_BOX(content), results_heading);
+    gtk_box_append(GTK_BOX(sidebar), results_heading);
 
     main_window->result_list = scrabble_result_list_new();
     gtk_widget_set_vexpand(results_scroll, TRUE);
@@ -537,7 +593,7 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
         GTK_POLICY_AUTOMATIC);
     gtk_scrolled_window_set_child(
         GTK_SCROLLED_WINDOW(results_scroll), main_window->result_list);
-    gtk_box_append(GTK_BOX(content), results_scroll);
+    gtk_box_append(GTK_BOX(sidebar), results_scroll);
 
     g_signal_connect(
         main_window->rack_entry,
@@ -581,6 +637,7 @@ void scrabble_main_window_present(
     }
 
     main_window = g_new0(ScrabbleMainWindow, 1);
+    main_window->game = scrabble_game_create();
     main_window->bundled_dictionary_path = g_strdup(dictionary_path);
     main_window->settings_path = scrabble_settings_default_path();
     main_window->window = gtk_application_window_new(application);

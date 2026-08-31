@@ -52,6 +52,96 @@ window {
   font-weight: 700;
 }
 
+.board-card {
+  padding: 14px;
+}
+
+.board-note {
+  color: #6c746d;
+  font-size: 12px;
+}
+
+.board-scroll,
+.board-scroll viewport {
+  background: transparent;
+}
+
+.scrabble-board {
+  padding: 4px;
+}
+
+.board-axis-label {
+  color: #64736b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+button.board-cell {
+  min-width: 31px;
+  min-height: 31px;
+  padding: 0;
+  border: 1px solid rgba(57, 65, 60, 0.26);
+  border-radius: 3px;
+  box-shadow: none;
+  color: #30433a;
+}
+
+button.board-normal-square {
+  background: #ddd8c9;
+}
+
+button.board-double-letter {
+  background: #a9d8e8;
+}
+
+button.board-triple-letter {
+  background: #5db2d2;
+}
+
+button.board-double-word {
+  background: #efb6bd;
+}
+
+button.board-triple-word {
+  background: #dc7180;
+}
+
+button.board-cell:hover {
+  border-color: #245d46;
+}
+
+button.board-cell:focus-visible,
+button.board-cell-selected {
+  box-shadow: inset 0 0 0 3px #245d46;
+}
+
+button.board-tile-filled {
+  background: #efd5a6;
+  border-color: #a8793d;
+  box-shadow: inset 0 -2px 0 #c3985d;
+}
+
+button.board-blank-tile {
+  background: #dce9e3;
+  border-color: #537866;
+}
+
+button.board-tile-filled.board-cell-selected {
+  box-shadow: inset 0 0 0 3px #245d46;
+}
+
+.board-cell-primary {
+  color: #2f291f;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.board-cell-points {
+  color: #5a4b36;
+  font-size: 7px;
+  font-weight: 700;
+}
+
 button.secondary-button {
   min-height: 34px;
   background: #f6f1e7;
