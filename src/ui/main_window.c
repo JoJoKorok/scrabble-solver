@@ -7,6 +7,7 @@
 #include "scrabble/solver.h"
 #include "ui/board_view.h"
 #include "ui/dictionary_picker.h"
+#include "ui/move_controls.h"
 #include "ui/rack_view.h"
 #include "ui/result_list.h"
 
@@ -21,6 +22,7 @@ enum {
 typedef struct {
     GtkWidget *window;
     GtkWidget *board_view;
+    GtkWidget *move_controls;
     GtkWidget *rack_entry;
     GtkWidget *rack_view;
     GtkWidget *solve_button;
@@ -61,12 +63,29 @@ static int read_rack(ScrabbleMainWindow *main_window, ScrabbleRack *rack) {
         scrabble_rack_init(rack, tiles) == SCRABBLE_RACK_OK;
 }
 
+static void update_move_control_availability(
+    ScrabbleMainWindow *main_window,
+    gboolean rack_is_ready) {
+    gboolean has_history = main_window->game != NULL &&
+        scrabble_game_move_count(main_window->game) > 0;
+
+    if (main_window->move_controls == NULL) {
+        return;
+    }
+    scrabble_move_controls_set_place_available(
+        main_window->move_controls,
+        rack_is_ready && main_window->game != NULL && !has_history);
+    scrabble_move_controls_set_history_available(
+        main_window->move_controls, has_history);
+}
+
 static void update_input_state(ScrabbleMainWindow *main_window) {
     ScrabbleRack rack;
     int valid = main_window->dictionary != NULL &&
         read_rack(main_window, &rack);
 
     gtk_widget_set_sensitive(main_window->solve_button, valid);
+    update_move_control_availability(main_window, valid);
     if (main_window->dictionary == NULL) {
         set_status(
             main_window,
@@ -140,6 +159,199 @@ static void on_rack_activated(GtkEntry *entry, gpointer user_data) {
 static void on_solve_clicked(GtkButton *button, gpointer user_data) {
     (void)button;
     solve(user_data);
+}
+
+static const char *move_error_message(ScrabbleMoveStatus status) {
+    switch (status) {
+        case SCRABBLE_MOVE_OUT_OF_BOUNDS:
+            return "That word extends past the edge of the board.";
+        case SCRABBLE_MOVE_INVALID_WORD:
+            return "Enter a word using letters A through Z.";
+        default:
+            return "The opening move could not be prepared.";
+    }
+}
+
+static const char *placement_error_message(
+    ScrabblePlacementStatus status) {
+    switch (status) {
+        case SCRABBLE_PLACEMENT_INVALID_MOVE:
+            return "The opening word must contain at least two letters.";
+        case SCRABBLE_PLACEMENT_BOARD_NOT_EMPTY:
+            return "The opening word is already on the board. "
+                   "Undo or start a new game first.";
+        case SCRABBLE_PLACEMENT_MOVE_NOT_CENTERED:
+            return "The opening word must cover the center star.";
+        case SCRABBLE_PLACEMENT_WORD_NOT_IN_DICTIONARY:
+            return "That word is not in the active dictionary.";
+        case SCRABBLE_PLACEMENT_RACK_MISMATCH:
+            return "That word cannot be made from the current rack.";
+        case SCRABBLE_PLACEMENT_BOARD_UPDATE_FAILED:
+            return "The board could not be updated.";
+        default:
+            return "The opening move could not be placed.";
+    }
+}
+
+static void refresh_board(ScrabbleMainWindow *main_window) {
+    scrabble_board_view_set_board(
+        main_window->board_view,
+        main_window->game == NULL
+            ? NULL
+            : scrabble_game_board(main_window->game));
+}
+
+static void place_opening_word(
+    ScrabbleMainWindow *main_window,
+    const ScrabbleMoveControlsRequest *request) {
+    ScrabbleRack rack;
+    ScrabbleMove move;
+    ScrabbleMove applied_move;
+    ScrabbleMoveStatus move_status;
+    ScrabblePlacementStatus placement_status;
+    ScrabbleGameStatus game_status;
+    const ScrabbleGameTurn *turn;
+    char message[128];
+
+    if (main_window->game == NULL || main_window->dictionary == NULL ||
+        !read_rack(main_window, &rack)) {
+        update_input_state(main_window);
+        return;
+    }
+
+    move_status = scrabble_move_init(
+        &move, request->word, request->start, request->direction);
+    if (move_status != SCRABBLE_MOVE_OK) {
+        set_status(
+            main_window, move_error_message(move_status), "status-error");
+        return;
+    }
+
+    game_status = scrabble_game_apply_opening_move(
+        main_window->game,
+        main_window->dictionary,
+        &rack,
+        &move,
+        &applied_move,
+        &placement_status);
+    if (game_status == SCRABBLE_GAME_PLACEMENT_REJECTED) {
+        set_status(
+            main_window,
+            placement_error_message(placement_status),
+            "status-error");
+        return;
+    }
+    if (game_status != SCRABBLE_GAME_OK) {
+        set_status(
+            main_window,
+            game_status == SCRABBLE_GAME_OUT_OF_MEMORY
+                ? "There is not enough memory to record the move."
+                : "The game could not update the board safely.",
+            "status-error");
+        return;
+    }
+
+    refresh_board(main_window);
+    update_move_control_availability(main_window, TRUE);
+    scrabble_move_controls_set_word(
+        main_window->move_controls, applied_move.word);
+    turn = scrabble_game_turn_at(
+        main_window->game,
+        scrabble_game_move_count(main_window->game) - 1);
+    g_snprintf(
+        message,
+        sizeof(message),
+        "%s placed for %d points. Connected moves are coming next.",
+        applied_move.word,
+        turn == NULL ? 0 : turn->score.total_score);
+    set_status(main_window, message, "status-success");
+}
+
+static void undo_opening_word(ScrabbleMainWindow *main_window) {
+    ScrabbleMove undone_move;
+    ScrabbleRack rack;
+    ScrabbleGameStatus status;
+    gboolean rack_is_ready;
+    char message[96];
+
+    if (main_window->game == NULL) {
+        return;
+    }
+
+    status = scrabble_game_undo_last_move(
+        main_window->game, &undone_move);
+    if (status != SCRABBLE_GAME_OK) {
+        set_status(
+            main_window,
+            status == SCRABBLE_GAME_NO_MOVES
+                ? "There is no move to undo."
+                : "The last move could not be undone safely.",
+            "status-error");
+        return;
+    }
+
+    refresh_board(main_window);
+    rack_is_ready = main_window->dictionary != NULL &&
+        read_rack(main_window, &rack);
+    update_move_control_availability(main_window, rack_is_ready);
+    g_snprintf(
+        message,
+        sizeof(message),
+        "%s removed. Adjust it or place it again.",
+        undone_move.word);
+    set_status(main_window, message, "status-ready");
+}
+
+static void start_new_game(ScrabbleMainWindow *main_window) {
+    ScrabbleBoardPosition center = {
+        SCRABBLE_BOARD_CENTER_INDEX,
+        SCRABBLE_BOARD_CENTER_INDEX
+    };
+
+    if (main_window->game == NULL) {
+        return;
+    }
+
+    scrabble_game_reset(main_window->game);
+    refresh_board(main_window);
+    scrabble_board_view_clear_selection(main_window->board_view);
+    scrabble_board_view_select_position(main_window->board_view, center);
+    scrabble_move_controls_set_start_position(
+        main_window->move_controls, center);
+    scrabble_move_controls_set_word(main_window->move_controls, "");
+    scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
+    update_input_state(main_window);
+}
+
+static void on_board_position_selected(
+    GtkWidget *board_view,
+    ScrabbleBoardPosition position,
+    gpointer user_data) {
+    ScrabbleMainWindow *main_window = user_data;
+
+    (void)board_view;
+    scrabble_move_controls_set_start_position(
+        main_window->move_controls, position);
+}
+
+static void on_move_controls_action(
+    GtkWidget *move_controls,
+    const ScrabbleMoveControlsRequest *request,
+    gpointer user_data) {
+    ScrabbleMainWindow *main_window = user_data;
+
+    (void)move_controls;
+    switch (request->action) {
+        case SCRABBLE_MOVE_CONTROLS_PLACE:
+            place_opening_word(main_window, request);
+            break;
+        case SCRABBLE_MOVE_CONTROLS_UNDO:
+            undo_opening_word(main_window);
+            break;
+        case SCRABBLE_MOVE_CONTROLS_NEW_GAME:
+            start_new_game(main_window);
+            break;
+    }
 }
 
 static void destroy_main_window(gpointer data) {
@@ -435,6 +647,10 @@ static void on_reset_dictionary_clicked(
 }
 
 static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
+    ScrabbleBoardPosition center = {
+        SCRABBLE_BOARD_CENTER_INDEX,
+        SCRABBLE_BOARD_CENTER_INDEX
+    };
     GtkWidget *content = gtk_box_new(GTK_ORIENTATION_VERTICAL, CONTENT_SPACING);
     GtkWidget *title = gtk_label_new("Scrabble Solver");
     GtkWidget *instructions = gtk_label_new(
@@ -450,7 +666,8 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     GtkWidget *board_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     GtkWidget *board_heading = gtk_label_new("GAME BOARD");
     GtkWidget *board_note = gtk_label_new(
-        "Select a square to prepare the starting position. Move entry is the next step.");
+        "Select the first letter's square, then use the opening-move "
+        "controls.");
     GtkWidget *board_scroll = gtk_scrolled_window_new();
     GtkWidget *sidebar = gtk_box_new(
         GTK_ORIENTATION_VERTICAL, CONTENT_SPACING);
@@ -580,6 +797,9 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     gtk_box_append(GTK_BOX(rack_card), main_window->status_label);
     gtk_box_append(GTK_BOX(sidebar), rack_card);
 
+    main_window->move_controls = scrabble_move_controls_new();
+    gtk_box_append(GTK_BOX(sidebar), main_window->move_controls);
+
     gtk_widget_set_halign(results_heading, GTK_ALIGN_START);
     gtk_widget_add_css_class(results_heading, "section-label");
     gtk_box_append(GTK_BOX(sidebar), results_heading);
@@ -620,6 +840,20 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
         "clicked",
         G_CALLBACK(on_reset_dictionary_clicked),
         main_window);
+
+    scrabble_board_view_set_selection_callback(
+        main_window->board_view,
+        on_board_position_selected,
+        main_window,
+        NULL);
+    scrabble_move_controls_set_callback(
+        main_window->move_controls,
+        on_move_controls_action,
+        main_window,
+        NULL);
+    scrabble_board_view_select_position(main_window->board_view, center);
+    scrabble_move_controls_set_start_position(
+        main_window->move_controls, center);
 
     return content;
 }

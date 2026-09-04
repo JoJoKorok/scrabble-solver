@@ -37,6 +37,7 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 | `src/ui/board_view.*` | Selectable rendering of board cells, premiums, and tiles |
 | `src/ui/dictionary_picker.*` | Version-compatible native file selection |
 | `src/ui/main_window.*` | Main workflow and coordination between UI and core |
+| `src/ui/move_controls.*` | Opening-word, direction, undo, and new-game controls |
 | `src/ui/rack_view.*` | Visual representation of the seven-tile rack |
 | `src/ui/result_list.*` | Rendering solver results without solving them |
 | `src/ui/theme.*` | Application-wide GTK stylesheet loading |

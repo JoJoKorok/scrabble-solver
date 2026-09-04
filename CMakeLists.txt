@@ -58,6 +58,7 @@ if(SCRABBLE_BUILD_GUI)
     src/ui/board_view.c
     src/ui/dictionary_picker.c
     src/ui/main_window.c
+    src/ui/move_controls.c
     src/ui/rack_view.c
     src/ui/result_list.c
     src/ui/theme.c

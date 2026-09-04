@@ -142,6 +142,66 @@ button.board-tile-filled.board-cell-selected {
   font-weight: 700;
 }
 
+.move-controls {
+  padding: 14px;
+}
+
+.move-note {
+  color: #6c746d;
+  font-size: 12px;
+}
+
+.move-position-label {
+  color: #315242;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+entry.move-word-entry {
+  min-height: 38px;
+  background: #ffffff;
+  border: 1px solid #b8ad98;
+  border-radius: 8px;
+  color: #24382f;
+  font-size: 15px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+entry.move-word-entry:focus {
+  border-color: #2f7659;
+  box-shadow: 0 0 0 2px rgba(47, 118, 89, 0.22);
+}
+
+dropdown.move-direction {
+  min-height: 38px;
+  background: #ffffff;
+  border: 1px solid #b8ad98;
+  border-radius: 8px;
+  color: #24382f;
+}
+
+button.place-word-button {
+  min-height: 38px;
+  background: #2f7659;
+  border: 1px solid #245d46;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 800;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+button.place-word-button:hover {
+  background: #28684d;
+}
+
+button.place-word-button:disabled {
+  background: #d9d4c9;
+  border-color: #c8c1b4;
+  color: #837f76;
+}
+
 button.secondary-button {
   min-height: 34px;
   background: #f6f1e7;

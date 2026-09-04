@@ -27,10 +27,12 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   letter premiums, word multipliers, blanks, and seven-tile bingo bonuses.
 - A selectable GTK board view with coordinate labels, accessible square
   descriptions, permanent premium colors, and core-board refresh support.
+- Manual opening-word controls for board position, direction, validated
+  placement, score feedback, undo, and new-game reset.
 
 ### Planned
 
-- Connected board-move validation and entry controls.
+- Connected board-move validation and editing.
 - Cross-word scoring.
 - Ranked legal move generation.
 - Self-contained Windows and Debian application packages.
