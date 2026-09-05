@@ -13,7 +13,8 @@ The application currently supports:
 - validated custom dictionary selection with a remembered preference;
 - ranked, scrollable word suggestions;
 - a selectable 15-by-15 board displaying the standard premium layout;
-- manual validated opening-word placement with scoring, undo, and reset; and
+- manual validated opening-word placement with scoring, undo, and reset;
+- a Place action on suggestions using the selected square and direction; and
 - CMake build configurations for Windows and Debian.
 
 This is currently a **rack solver with an in-progress board workflow**, not yet
@@ -24,6 +25,23 @@ generation are still being developed.
 The current development version is **0.1.0**. See [CHANGELOG.md](CHANGELOG.md)
 for milestone details and [docs/ROADMAP.md](docs/ROADMAP.md) for the planned
 path from rack solving to full board-position solving.
+
+## Place an opening suggestion
+
+1. Enter your rack (use `?` or `*` for a blank) and click **Find words**.
+2. Select the square for the word's first letter and choose **Horizontal** or
+   **Vertical** in the opening-move controls.
+3. Click **Place** beside a suggestion. You can also select a result and press
+   Enter, or double-click it.
+
+The word is checked against the current rack, dictionary, board boundaries,
+and center star before placement. The listed score is the rack tile score;
+the placement message includes board premiums and any seven-tile bonus.
+Blanks are assigned by the core and displayed as zero-point board tiles.
+
+After placement, use **Undo** to try another opening or **New game** to clear
+the board. Suggestion placement is available only on an empty board for now.
+The rack is still entered manually and is not reduced or refilled automatically.
 
 ## Dictionary
 
@@ -71,6 +89,13 @@ cmake -S . -B build -G Ninja \
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
+
+GTK workflow tests need a display. On a headless Debian machine, install
+`xvfb`, `xauth`, and `dbus`, then run
+`xvfb-run -a ctest --test-dir build --output-on-failure`.
+Without a display the GTK integration test is reported as skipped; the core
+tests still run. The Debian CI job uses a virtual display. CMake runs the GTK
+test in a private D-Bus session when `dbus-run-session` is available.
 
 Run the application:
 
@@ -173,6 +198,7 @@ src/ui/                 GTK application and reusable interface components
 tests/fixtures/         Small deterministic test data
 tests/performance/      Full-dictionary performance regression coverage
 tests/support/          Lightweight shared C test utilities
+tests/ui/               GTK workflow tests with isolated settings
 tests/unit/             Focused tests that mirror production modules
 ```
 

@@ -30,6 +30,7 @@ Status: in progress
 - [x] Represent the 15-by-15 board and premium-square layout in the core.
 - [x] Display an accessible, selectable board in the desktop interface.
 - [x] Place, score, undo, and reset a validated opening word manually.
+- [x] Place a rack suggestion using the selected board square and direction.
 - [ ] Validate tile placement, connectivity, and formed cross-words.
 - [ ] Score main words, cross-words, premiums, blanks, and seven-tile bingos.
 - [x] Add deterministic unit tests for completed board rules.

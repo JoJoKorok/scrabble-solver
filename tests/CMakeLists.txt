@@ -54,6 +54,26 @@ set_tests_properties(test_large_dictionary PROPERTIES
 )
 
 if(TARGET scrabble_ui_support)
+  add_executable(test_suggestion_placement ui/test_suggestion_placement.c)
+  target_link_libraries(test_suggestion_placement PRIVATE scrabble_ui)
+  target_include_directories(test_suggestion_placement PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/generated
+  )
+  find_program(SCRABBLE_DBUS_RUN_SESSION NAMES dbus-run-session)
+  if(SCRABBLE_DBUS_RUN_SESSION)
+    add_test(NAME test_suggestion_placement
+      COMMAND ${SCRABBLE_DBUS_RUN_SESSION} -- ./$<TARGET_FILE_NAME:test_suggestion_placement>)
+  else()
+    add_test(NAME test_suggestion_placement COMMAND test_suggestion_placement)
+  endif()
+  set_tests_properties(test_suggestion_placement PROPERTIES
+    LABELS "ui;integration"
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:test_suggestion_placement>
+    SKIP_RETURN_CODE 77
+    TIMEOUT 30
+    ENVIRONMENT "GTK_A11Y=none;GSK_RENDERER=cairo"
+  )
+
   add_executable(test_resources unit/test_resources.c)
   target_link_libraries(test_resources PRIVATE
     scrabble_core

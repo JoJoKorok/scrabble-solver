@@ -29,6 +29,10 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   descriptions, permanent premium colors, and core-board refresh support.
 - Manual opening-word controls for board position, direction, validated
   placement, score feedback, undo, and new-game reset.
+- Opening placement directly from suggestions, with mouse and keyboard
+  activation, shared validation, and explicit rack-versus-board score guidance.
+- GTK integration tests covering suggestion ownership, blank scoring,
+  placement validation, undo, and result invalidation, with a Debian CI display.
 
 ### Planned
 

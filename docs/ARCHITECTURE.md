@@ -39,10 +39,11 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 | `src/ui/main_window.*` | Main workflow and coordination between UI and core |
 | `src/ui/move_controls.*` | Opening-word, direction, undo, and new-game controls |
 | `src/ui/rack_view.*` | Visual representation of the seven-tile rack |
-| `src/ui/result_list.*` | Rendering solver results without solving them |
+| `src/ui/result_list.*` | Owning displayed result copies and emitting placement requests |
 | `src/ui/theme.*` | Application-wide GTK stylesheet loading |
 | `tests/performance/` | Deterministic checks against the full bundled dictionary |
 | `tests/unit/` | Focused behavior tests corresponding to production modules |
+| `tests/ui/` | GTK workflow integration tests with isolated user settings |
 
 ## Ownership conventions
 
@@ -117,6 +118,19 @@ The board view copies cell values from a caller-owned `ScrabbleBoard` when it
 is refreshed. It does not retain or modify the core board. Selection is UI
 state, exposed through the component API so move-entry controls can coordinate
 with it without knowing how the grid is rendered.
+
+The `scrabble_ui` library is linked by both the executable and GTK integration
+tests, so tests exercise the production components and main-window wiring.
+Each result row owns a copy of its solver result and passes a temporary copy
+to its callback; the solver can release its result set immediately. The main
+window routes suggestion placement through the current move controls, which
+use the same validation, scoring, and history path as manual word entry.
+Rack and dictionary changes discard the displayed results, while board
+history controls whether their placement actions are enabled.
+
+For a local visual check, set `SCRABBLE_TEST_SCREENSHOT` to an absolute PNG
+path before running the suggestion-placement test. GTK renders the tested
+window after placement; normal test runs do not produce image files.
 
 ## Future boundaries
 

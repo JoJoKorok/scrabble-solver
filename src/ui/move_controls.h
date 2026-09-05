@@ -38,6 +38,11 @@ void scrabble_move_controls_set_history_available(
 void scrabble_move_controls_set_word(
     GtkWidget *move_controls,
     const char *word);
+/* Uses the current start and direction and the same guard as Place word.
+   Returns TRUE if dispatched; the callback reports validation errors. */
+gboolean scrabble_move_controls_place_word(
+    GtkWidget *move_controls,
+    const char *word);
 
 /* Replaces the action callback. destroy_notify releases user_data when the
    callback is replaced or the controls are destroyed. */

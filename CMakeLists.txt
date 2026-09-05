@@ -52,9 +52,7 @@ if(SCRABBLE_BUILD_GUI)
   )
   target_link_libraries(scrabble_ui_support PUBLIC PkgConfig::GTK4)
 
-  add_executable(scrabble_solver WIN32
-    src/main.c
-    src/ui/application.c
+  add_library(scrabble_ui STATIC
     src/ui/board_view.c
     src/ui/dictionary_picker.c
     src/ui/main_window.c
@@ -63,11 +61,14 @@ if(SCRABBLE_BUILD_GUI)
     src/ui/result_list.c
     src/ui/theme.c
   )
-  target_include_directories(scrabble_solver PRIVATE src)
-  target_link_libraries(scrabble_solver PRIVATE
+  target_include_directories(scrabble_ui PUBLIC src)
+  target_link_libraries(scrabble_ui PUBLIC
     scrabble_core
     scrabble_ui_support
   )
+
+  add_executable(scrabble_solver WIN32 src/main.c src/ui/application.c)
+  target_link_libraries(scrabble_solver PRIVATE scrabble_ui)
 
   install(TARGETS scrabble_solver RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
   install(

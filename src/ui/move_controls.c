@@ -134,6 +134,7 @@ GtkWidget *scrabble_move_controls_new(void) {
 
     gtk_widget_set_halign(note, GTK_ALIGN_START);
     gtk_label_set_wrap(GTK_LABEL(note), TRUE);
+    gtk_label_set_max_width_chars(GTK_LABEL(note), 40);
     gtk_widget_add_css_class(note, "move-note");
     gtk_box_append(GTK_BOX(controls_widget), note);
 
@@ -257,6 +258,22 @@ void scrabble_move_controls_set_word(
     g_return_if_fail(controls != NULL);
     gtk_editable_set_text(
         GTK_EDITABLE(controls->word_entry), word == NULL ? "" : word);
+}
+
+gboolean scrabble_move_controls_place_word(
+    GtkWidget *move_controls,
+    const char *word) {
+    ScrabbleMoveControlsState *controls = controls_state(move_controls);
+
+    g_return_val_if_fail(controls != NULL, FALSE);
+    if (!controls->place_available || !controls->has_start_position ||
+        controls->callback == NULL || word == NULL || word[0] == '\0') {
+        return FALSE;
+    }
+
+    scrabble_move_controls_set_word(move_controls, word);
+    emit_action(controls, SCRABBLE_MOVE_CONTROLS_PLACE);
+    return TRUE;
 }
 
 void scrabble_move_controls_set_callback(

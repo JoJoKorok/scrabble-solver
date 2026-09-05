@@ -31,7 +31,10 @@ jobs:
             cmake \
             ninja-build \
             pkgconf \
-            libgtk-4-dev
+            libgtk-4-dev \
+            xvfb \
+            xauth \
+            dbus
 
       - name: Check out source
         uses: actions/checkout@v6
@@ -50,7 +53,7 @@ jobs:
         run: cmake --build build-ci-gui
 
       - name: Test GTK application and core
-        run: ctest --test-dir build-ci-gui --output-on-failure
+        run: xvfb-run -a ctest --test-dir build-ci-gui --output-on-failure
 
       - name: Verify install layout
         run: |
