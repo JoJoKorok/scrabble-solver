@@ -19,6 +19,150 @@ static ScrabbleDictionary *load_dictionary(void) {
     return status == SCRABBLE_DICTIONARY_OK ? dictionary : NULL;
 }
 
+static int resolves_matching_board_letters(void) {
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleMove move;
+    ScrabbleMove resolved;
+    ScrabbleMoveTile tile;
+    ScrabbleBoardCell cell;
+
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 7), 'A', 1));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "cat", position(7, 6), SCRABBLE_MOVE_HORIZONTAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_set_tile_blank(&move, 0, 1));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_OK,
+        scrabble_move_resolve_board_tiles(board, &move, &resolved));
+    TEST_ASSERT_STRING("CAT", resolved.word);
+    TEST_ASSERT_INT(2, scrabble_move_rack_tile_count(&resolved));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_tile_at(&resolved, 0, &tile));
+    TEST_ASSERT_INT(1, tile.from_rack);
+    TEST_ASSERT_INT(1, tile.is_blank);
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_tile_at(&resolved, 1, &tile));
+    TEST_ASSERT_INT('A', tile.letter);
+    TEST_ASSERT_INT(0, tile.from_rack);
+    TEST_ASSERT_INT(0, tile.is_blank);
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_tile_at(&resolved, 2, &tile));
+    TEST_ASSERT_INT(1, tile.from_rack);
+
+    TEST_ASSERT_INT(1, scrabble_board_tile_count(board));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_cell(board, position(7, 7), &cell));
+    TEST_ASSERT_INT('A', cell.letter);
+    TEST_ASSERT_INT(1, cell.is_blank);
+
+    scrabble_board_destroy(board);
+    return 0;
+}
+
+static int rejects_conflicting_board_letters_atomically(void) {
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleMove move;
+    ScrabbleMove output;
+    ScrabbleBoardCell cell;
+
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 7), 'X', 0));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "CAT", position(7, 6), SCRABBLE_MOVE_HORIZONTAL));
+    memset(&output, 0xFF, sizeof(output));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_LETTER_CONFLICT,
+        scrabble_move_resolve_board_tiles(board, &move, &output));
+    TEST_ASSERT_INT(0, output.length);
+    TEST_ASSERT_INT(1, scrabble_board_tile_count(board));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_cell(board, position(7, 7), &cell));
+    TEST_ASSERT_INT('X', cell.letter);
+
+    scrabble_board_destroy(board);
+    return 0;
+}
+
+static int rejects_moves_that_add_no_tiles(void) {
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleMove move;
+    ScrabbleMove output;
+
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 6), 'C', 0));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 7), 'A', 0));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 8), 'T', 0));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "CAT", position(7, 6), SCRABBLE_MOVE_HORIZONTAL));
+    memset(&output, 0xFF, sizeof(output));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_NO_NEW_TILES,
+        scrabble_move_resolve_board_tiles(board, &move, &output));
+    TEST_ASSERT_INT(0, output.length);
+    TEST_ASSERT_INT(3, scrabble_board_tile_count(board));
+
+    scrabble_board_destroy(board);
+    return 0;
+}
+
+static int leaves_connectivity_for_later_validation(void) {
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleMove move;
+    ScrabbleMove resolved;
+
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 7), 'A', 0));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "DOG", position(0, 0), SCRABBLE_MOVE_VERTICAL));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_OK,
+        scrabble_move_resolve_board_tiles(board, &move, &resolved));
+    TEST_ASSERT_INT(3, scrabble_move_rack_tile_count(&resolved));
+
+    move.length = 2;
+    memset(&resolved, 0xFF, sizeof(resolved));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_MOVE,
+        scrabble_move_resolve_board_tiles(board, &move, &resolved));
+    TEST_ASSERT_INT(0, resolved.length);
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_move_resolve_board_tiles(NULL, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_move_resolve_board_tiles(board, NULL, NULL));
+
+    scrabble_board_destroy(board);
+    return 0;
+}
+
 static int validates_without_changing_the_board(void) {
     ScrabbleDictionary *dictionary = load_dictionary();
     ScrabbleBoard *board = scrabble_board_create();
@@ -238,6 +382,14 @@ static int rejects_invalid_opening_moves_atomically(void) {
 }
 
 static const ScrabbleTestCase TESTS[] = {
+    {"resolves matching board letters",
+     resolves_matching_board_letters},
+    {"rejects conflicting board letters atomically",
+     rejects_conflicting_board_letters_atomically},
+    {"rejects moves that add no tiles",
+     rejects_moves_that_add_no_tiles},
+    {"leaves connectivity for later validation",
+     leaves_connectivity_for_later_validation},
     {"validates without changing the board",
      validates_without_changing_the_board},
     {"applies a centered horizontal word",
