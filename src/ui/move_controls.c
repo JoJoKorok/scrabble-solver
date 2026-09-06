@@ -105,10 +105,10 @@ GtkWidget *scrabble_move_controls_new(void) {
         GTK_ORIENTATION_VERTICAL, 10);
     ScrabbleMoveControlsState *controls = g_new0(
         ScrabbleMoveControlsState, 1);
-    GtkWidget *heading = gtk_label_new("OPENING MOVE");
+    GtkWidget *heading = gtk_label_new("PLACE A WORD");
     GtkWidget *note = gtk_label_new(
-        "The selected square is the first letter. The word must cross the "
-        "center star.");
+        "The selected square is the first letter. The opening word crosses "
+        "the center star; later words must connect to the board.");
     GtkWidget *placement_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *history_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 
@@ -152,7 +152,7 @@ GtkWidget *scrabble_move_controls_new(void) {
     gtk_accessible_update_property(
         GTK_ACCESSIBLE(controls->word_entry),
         GTK_ACCESSIBLE_PROPERTY_LABEL,
-        "Opening word",
+        "Word to place",
         -1);
     gtk_box_append(GTK_BOX(controls_widget), controls->word_entry);
 
@@ -228,6 +228,20 @@ void scrabble_move_controls_set_start_position(
         position.row + 1);
     gtk_label_set_text(GTK_LABEL(controls->position_label), label);
     update_place_button(controls);
+}
+
+void scrabble_move_controls_set_direction(
+    GtkWidget *move_controls,
+    ScrabbleMoveDirection direction) {
+    ScrabbleMoveControlsState *controls = controls_state(move_controls);
+
+    g_return_if_fail(controls != NULL);
+    g_return_if_fail(
+        direction == SCRABBLE_MOVE_HORIZONTAL ||
+        direction == SCRABBLE_MOVE_VERTICAL);
+    gtk_drop_down_set_selected(
+        GTK_DROP_DOWN(controls->direction_dropdown),
+        direction == SCRABBLE_MOVE_HORIZONTAL ? 0 : 1);
 }
 
 void scrabble_move_controls_set_place_available(

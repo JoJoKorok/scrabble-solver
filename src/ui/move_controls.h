@@ -29,6 +29,9 @@ GtkWidget *scrabble_move_controls_new(void);
 void scrabble_move_controls_set_start_position(
     GtkWidget *move_controls,
     ScrabbleBoardPosition position);
+void scrabble_move_controls_set_direction(
+    GtkWidget *move_controls,
+    ScrabbleMoveDirection direction);
 void scrabble_move_controls_set_place_available(
     GtkWidget *move_controls,
     gboolean available);

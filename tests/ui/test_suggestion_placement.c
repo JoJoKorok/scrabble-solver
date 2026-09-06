@@ -75,6 +75,29 @@ static GtkListBoxRow *result_row(GtkListBox *list, const char *word) {
     return NULL;
 }
 
+static GtkListBoxRow *result_row_at(
+    GtkListBox *list,
+    const char *word,
+    const char *placement) {
+    for (GtkWidget *row = gtk_widget_get_first_child(GTK_WIDGET(list));
+         row != NULL;
+         row = gtk_widget_get_next_sibling(row)) {
+        GtkWidget *word_label = find_class(row, "result-word");
+        GtkWidget *placement_label = find_class(row, "placement-chip");
+
+        if (word_label != NULL && placement_label != NULL &&
+            g_strcmp0(
+                gtk_label_get_text(GTK_LABEL(word_label)), word) == 0 &&
+            g_strcmp0(
+                gtk_label_get_text(GTK_LABEL(placement_label)),
+                placement) == 0) {
+            return GTK_LIST_BOX_ROW(row);
+        }
+    }
+    g_error("Missing result: %s at %s", word, placement);
+    return NULL;
+}
+
 static void setup_window(WindowFixture *fixture, gconstpointer data) {
     GError *error = NULL;
     char *settings_path = scrabble_settings_default_path();
@@ -132,10 +155,10 @@ static void search(WindowFixture *fixture, const char *rack) {
 
 static void assert_word(
     WindowFixture *fixture,
+    const char *word,
     size_t row,
     size_t column,
     gboolean vertical) {
-    const char *word = "RETAINS";
     for (size_t i = 0; word[i] != '\0'; ++i) {
         GtkWidget *cell = square(
             fixture, row + (vertical ? i : 0), column + (vertical ? 0 : i));
@@ -190,11 +213,10 @@ static void save_window_snapshot(WindowFixture *fixture) {
     g_object_unref(paintable);
 }
 
-static void places_blanks_undoes_and_uses_direction(
+static void places_opening_and_connected_suggestions(
     WindowFixture *fixture,
     gconstpointer data) {
     GtkListBoxRow *row;
-    GtkWidget *place;
     (void)data;
 
     g_test_message("Searching and placing the horizontal opening");
@@ -204,33 +226,35 @@ static void places_blanks_undoes_and_uses_direction(
     g_assert_cmpstr(gtk_label_get_text(GTK_LABEL(find_class(
         GTK_WIDGET(row), "score-chip"))), ==, "6 points");
     click(square(fixture, 7, 4));
-    place = find_button(GTK_WIDGET(row), "Place");
-    click(place);
-    assert_word(fixture, 7, 4, FALSE);
+    click(find_button(GTK_WIDGET(row), "Place"));
+    assert_word(fixture, "RETAINS", 7, 4, FALSE);
     g_assert_true(gtk_widget_has_css_class(
         square(fixture, 7, 7), "board-blank-tile"));
     g_assert_nonnull(strstr(
         gtk_label_get_text(GTK_LABEL(fixture->status)), "62 points"));
-    g_assert_false(gtk_widget_get_sensitive(place));
-    save_window_snapshot(fixture);
-    g_assert_false(gtk_widget_get_sensitive(find_class(
-        fixture->controls, "place-word-button")));
-    g_signal_emit_by_name(fixture->results, "row-activated", row);
+    g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
 
+    g_test_message("Searching and placing a connected board suggestion");
+    search(fixture, "RIN");
+    row = result_row_at(fixture->results, "RAIN", "H7 down");
+    g_assert_cmpstr(gtk_label_get_text(GTK_LABEL(find_class(
+        GTK_WIDGET(row), "score-chip"))), ==, "3 points");
+    click(find_button(GTK_WIDGET(row), "Place"));
+    assert_word(fixture, "RAIN", 6, 7, TRUE);
+    g_assert_cmpuint(gtk_drop_down_get_selected(GTK_DROP_DOWN(find_class(
+        fixture->controls, "move-direction"))), ==, 1);
+    g_assert_nonnull(strstr(
+        gtk_label_get_text(GTK_LABEL(fixture->status)), "3 points"));
+    g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
+    save_window_snapshot(fixture);
+
+    g_test_message("Undoing the connected move without disturbing the opening");
     click(find_button(fixture->controls, "Undo"));
     g_assert_false(gtk_widget_has_css_class(
-        square(fixture, 7, 7), "board-tile-filled"));
-    g_assert_true(gtk_widget_get_sensitive(place));
-    click(square(fixture, 4, 7));
-    gtk_drop_down_set_selected(GTK_DROP_DOWN(find_class(
-        fixture->controls, "move-direction")), 1);
-    /* Keyboard activation of a selected result uses the same placement path. */
-    g_signal_emit_by_name(fixture->results, "row-activated", row);
-    assert_word(fixture, 4, 7, TRUE);
-    g_assert_nonnull(strstr(
-        gtk_label_get_text(GTK_LABEL(fixture->status)), "62 points"));
-    click(find_button(fixture->controls, "New game"));
-    g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
+        square(fixture, 6, 7), "board-tile-filled"));
+    assert_word(fixture, "RETAINS", 7, 4, FALSE);
+
+    click(find_button(fixture->controls, "Undo"));
     g_assert_false(gtk_widget_has_css_class(
         square(fixture, 7, 7), "board-tile-filled"));
 }
@@ -317,8 +341,8 @@ int main(int argc, char **argv) {
         g_print("A display is required for GTK integration tests. Use xvfb-run.\n");
         return 77;
     }
-    g_test_add("/suggestions/blank-placement-undo-direction", WindowFixture, NULL,
-        setup_window, places_blanks_undoes_and_uses_direction, teardown_window);
+    g_test_add("/suggestions/opening-and-connected-placement", WindowFixture, NULL,
+        setup_window, places_opening_and_connected_suggestions, teardown_window);
     g_test_add("/suggestions/validation-and-invalidation", WindowFixture, NULL,
         setup_window, rejects_invalid_positions_and_revalidates_rack, teardown_window);
     g_test_add_func("/suggestions/result-lifetime", results_own_data_and_guard_activation);

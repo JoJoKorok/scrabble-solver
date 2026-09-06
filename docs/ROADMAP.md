@@ -31,18 +31,18 @@ Status: in progress
 - [x] Display an accessible, selectable board in the desktop interface.
 - [x] Place, score, undo, and reset a validated opening word manually.
 - [x] Place a rack suggestion using the selected board square and direction.
-- [ ] Validate tile placement, connectivity, and formed cross-words.
-- [ ] Score main words, cross-words, premiums, blanks, and seven-tile bingos.
+- [x] Validate tile placement, connectivity, and formed cross-words.
+- [x] Score main words, cross-words, premiums, blanks, and seven-tile bingos.
 - [x] Add deterministic unit tests for completed board rules.
 
 ## 0.4 - Full move generation
 
-Status: planned
+Status: in progress
 
-- Generate legal placements from a rack and board position.
-- Rank moves by total turn score.
+- [x] Generate legal placements from a rack and board position.
+- [x] Rank moves by total turn score.
+- [x] Profile full-dictionary board searches and add a regression test.
 - Add cancellation and progress reporting for longer searches.
-- Profile realistic positions and optimize only measured bottlenecks.
 
 ## 1.0 - Supported desktop release
 

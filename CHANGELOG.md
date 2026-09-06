@@ -33,12 +33,17 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   activation, shared validation, and explicit rack-versus-board score guidance.
 - GTK integration tests covering suggestion ownership, blank scoring,
   placement validation, undo, and result invalidation, with a Debian CI display.
+- Connected move validation for board intersections, adjacency, complete main
+  words, perpendicular words, rack usage, and atomic placement.
+- Full connected scoring for reused tiles, cross-words, premium squares,
+  blanks, bingos, game history, and undo.
+- Ranked legal board suggestions with exact coordinates and direction,
+  highest-scoring blank assignment, direct placement, and full-dictionary
+  performance coverage.
 
 ### Planned
 
-- Connected board-move validation and editing.
-- Cross-word scoring.
-- Ranked legal move generation.
+- Background cancellation and progress reporting for long searches.
 - Self-contained Windows and Debian application packages.
 
 ## [0.1.0] - 2026-08-13

@@ -356,6 +356,12 @@ button.solve-button:disabled {
   font-weight: 850;
 }
 
+.placement-chip {
+  color: #65776d;
+  font-size: 11px;
+  font-weight: 750;
+}
+
 .blank-chip {
   background: #e0eee8;
   border-radius: 999px;

@@ -74,12 +74,12 @@ static void update_move_control_availability(
     }
     scrabble_move_controls_set_place_available(
         main_window->move_controls,
-        rack_is_ready && main_window->game != NULL && !has_history);
+        rack_is_ready && main_window->game != NULL);
     scrabble_move_controls_set_history_available(
         main_window->move_controls, has_history);
     scrabble_result_list_set_placement_available(
         GTK_LIST_BOX(main_window->result_list),
-        rack_is_ready && main_window->game != NULL && !has_history);
+        rack_is_ready && main_window->game != NULL);
 }
 
 static void update_input_state(ScrabbleMainWindow *main_window) {
@@ -102,7 +102,13 @@ static void update_input_state(ScrabbleMainWindow *main_window) {
             "Enter one to seven letters or blank tiles.",
             "status-muted");
     } else {
-        set_status(main_window, "Ready to find words.", "status-ready");
+        set_status(
+            main_window,
+            main_window->game != NULL &&
+                    scrabble_game_move_count(main_window->game) > 0
+                ? "Ready to find a legal board move."
+                : "Ready to find opening words.",
+            "status-ready");
     }
 }
 
@@ -117,7 +123,17 @@ static void solve(ScrabbleMainWindow *main_window) {
         return;
     }
 
-    status = scrabble_solve(main_window->dictionary, &rack, &results);
+    if (main_window->game != NULL &&
+        scrabble_game_move_count(main_window->game) > 0) {
+        status = scrabble_solve_board(
+            main_window->dictionary,
+            &rack,
+            scrabble_game_board(main_window->game),
+            &results);
+    } else {
+        status = scrabble_solve(
+            main_window->dictionary, &rack, &results);
+    }
     if (status != SCRABBLE_SOLVER_OK) {
         scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
         set_status(
@@ -130,14 +146,26 @@ static void solve(ScrabbleMainWindow *main_window) {
     scrabble_result_list_set_results(
         GTK_LIST_BOX(main_window->result_list), &results);
     if (results.count == 0) {
-        set_status(main_window, "No matching words found.", "status-muted");
+        set_status(
+            main_window,
+            main_window->game != NULL &&
+                    scrabble_game_move_count(main_window->game) > 0
+                ? "No legal moves found for this rack."
+                : "No matching opening words found.",
+            "status-muted");
     } else {
         g_snprintf(
             message,
             sizeof(message),
-            "%zu matching %s found.",
+            main_window->game != NULL &&
+                    scrabble_game_move_count(main_window->game) > 0
+                ? "%zu legal %s found."
+                : "%zu matching %s found.",
             results.count,
-            results.count == 1 ? "word" : "words");
+            main_window->game != NULL &&
+                    scrabble_game_move_count(main_window->game) > 0
+                ? results.count == 1 ? "move" : "moves"
+                : results.count == 1 ? "word" : "words");
         set_status(main_window, message, "status-success");
     }
     scrabble_result_set_destroy(&results);
@@ -171,7 +199,7 @@ static const char *move_error_message(ScrabbleMoveStatus status) {
         case SCRABBLE_MOVE_INVALID_WORD:
             return "Enter a word using letters A through Z.";
         default:
-            return "The opening move could not be prepared.";
+            return "The move could not be prepared.";
     }
 }
 
@@ -179,7 +207,7 @@ static const char *placement_error_message(
     ScrabblePlacementStatus status) {
     switch (status) {
         case SCRABBLE_PLACEMENT_INVALID_MOVE:
-            return "The opening word must contain at least two letters.";
+            return "The word must contain at least two letters.";
         case SCRABBLE_PLACEMENT_BOARD_NOT_EMPTY:
             return "The opening word is already on the board. "
                    "Undo or start a new game first.";
@@ -189,10 +217,22 @@ static const char *placement_error_message(
             return "That word is not in the active dictionary.";
         case SCRABBLE_PLACEMENT_RACK_MISMATCH:
             return "That word cannot be made from the current rack.";
+        case SCRABBLE_PLACEMENT_LETTER_CONFLICT:
+            return "That word conflicts with a letter already on the board.";
+        case SCRABBLE_PLACEMENT_NO_NEW_TILES:
+            return "The move must add at least one new tile.";
+        case SCRABBLE_PLACEMENT_BOARD_EMPTY:
+            return "Place an opening word before adding a connected move.";
+        case SCRABBLE_PLACEMENT_MOVE_NOT_CONNECTED:
+            return "That word must connect to a tile already on the board.";
+        case SCRABBLE_PLACEMENT_INCOMPLETE_WORD:
+            return "Include the complete word already continued on the board.";
+        case SCRABBLE_PLACEMENT_CROSS_WORD_NOT_IN_DICTIONARY:
+            return "A perpendicular word made by that move is not in the dictionary.";
         case SCRABBLE_PLACEMENT_BOARD_UPDATE_FAILED:
             return "The board could not be updated.";
         default:
-            return "The opening move could not be placed.";
+            return "The move could not be placed.";
     }
 }
 
@@ -204,16 +244,15 @@ static void refresh_board(ScrabbleMainWindow *main_window) {
             : scrabble_game_board(main_window->game));
 }
 
-static void place_opening_word(
+static void apply_move(
     ScrabbleMainWindow *main_window,
-    const ScrabbleMoveControlsRequest *request) {
+    const ScrabbleMove *move) {
     ScrabbleRack rack;
-    ScrabbleMove move;
     ScrabbleMove applied_move;
-    ScrabbleMoveStatus move_status;
     ScrabblePlacementStatus placement_status;
     ScrabbleGameStatus game_status;
     const ScrabbleGameTurn *turn;
+    gboolean has_history;
     char message[128];
 
     if (main_window->game == NULL || main_window->dictionary == NULL ||
@@ -222,21 +261,24 @@ static void place_opening_word(
         return;
     }
 
-    move_status = scrabble_move_init(
-        &move, request->word, request->start, request->direction);
-    if (move_status != SCRABBLE_MOVE_OK) {
-        set_status(
-            main_window, move_error_message(move_status), "status-error");
-        return;
+    has_history = scrabble_game_move_count(main_window->game) > 0;
+    if (has_history) {
+        game_status = scrabble_game_apply_move(
+            main_window->game,
+            main_window->dictionary,
+            &rack,
+            move,
+            &applied_move,
+            &placement_status);
+    } else {
+        game_status = scrabble_game_apply_opening_move(
+            main_window->game,
+            main_window->dictionary,
+            &rack,
+            move,
+            &applied_move,
+            &placement_status);
     }
-
-    game_status = scrabble_game_apply_opening_move(
-        main_window->game,
-        main_window->dictionary,
-        &rack,
-        &move,
-        &applied_move,
-        &placement_status);
     if (game_status == SCRABBLE_GAME_PLACEMENT_REJECTED) {
         set_status(
             main_window,
@@ -255,6 +297,7 @@ static void place_opening_word(
     }
 
     refresh_board(main_window);
+    scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
     update_move_control_availability(main_window, TRUE);
     scrabble_move_controls_set_word(
         main_window->move_controls, applied_move.word);
@@ -264,13 +307,28 @@ static void place_opening_word(
     g_snprintf(
         message,
         sizeof(message),
-        "%s placed for %d points. Connected moves are coming next.",
+        "%s placed for %d points. Update the rack for the next turn.",
         applied_move.word,
         turn == NULL ? 0 : turn->score.total_score);
     set_status(main_window, message, "status-success");
 }
 
-static void undo_opening_word(ScrabbleMainWindow *main_window) {
+static void place_requested_word(
+    ScrabbleMainWindow *main_window,
+    const ScrabbleMoveControlsRequest *request) {
+    ScrabbleMove move;
+    ScrabbleMoveStatus status = scrabble_move_init(
+        &move, request->word, request->start, request->direction);
+
+    if (status != SCRABBLE_MOVE_OK) {
+        set_status(main_window, move_error_message(status), "status-error");
+        return;
+    }
+
+    apply_move(main_window, &move);
+}
+
+static void undo_last_word(ScrabbleMainWindow *main_window) {
     ScrabbleMove undone_move;
     ScrabbleRack rack;
     ScrabbleGameStatus status;
@@ -294,6 +352,7 @@ static void undo_opening_word(ScrabbleMainWindow *main_window) {
     }
 
     refresh_board(main_window);
+    scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
     rack_is_ready = main_window->dictionary != NULL &&
         read_rack(main_window, &rack);
     update_move_control_availability(main_window, rack_is_ready);
@@ -344,7 +403,20 @@ static void on_result_activated(
     ScrabbleMainWindow *main_window = user_data;
 
     (void)list;
-    scrabble_move_controls_place_word(main_window->move_controls, result->word);
+    if (result->has_placement) {
+        scrabble_board_view_select_position(
+            main_window->board_view, result->move.start);
+        scrabble_move_controls_set_start_position(
+            main_window->move_controls, result->move.start);
+        scrabble_move_controls_set_direction(
+            main_window->move_controls, result->move.direction);
+        scrabble_move_controls_set_word(
+            main_window->move_controls, result->word);
+        apply_move(main_window, &result->move);
+    } else {
+        scrabble_move_controls_place_word(
+            main_window->move_controls, result->word);
+    }
 }
 
 static void on_move_controls_action(
@@ -356,10 +428,10 @@ static void on_move_controls_action(
     (void)move_controls;
     switch (request->action) {
         case SCRABBLE_MOVE_CONTROLS_PLACE:
-            place_opening_word(main_window, request);
+            place_requested_word(main_window, request);
             break;
         case SCRABBLE_MOVE_CONTROLS_UNDO:
-            undo_opening_word(main_window);
+            undo_last_word(main_window);
             break;
         case SCRABBLE_MOVE_CONTROLS_NEW_GAME:
             start_new_game(main_window);

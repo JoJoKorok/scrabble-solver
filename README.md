@@ -1,8 +1,8 @@
 # Scrabble Solver
 
 Scrabble Solver is a cross-platform desktop application written in C17 with
-GTK 4. Enter up to seven rack tiles and it displays the words that can be
-formed, ranked by their standard English Scrabble tile score.
+GTK 4. Enter up to seven rack tiles to find opening words, then keep the board
+updated to receive legal placements ranked by their complete turn score.
 
 The application currently supports:
 
@@ -11,37 +11,43 @@ The application currently supports:
 - zero-point scoring for letters supplied by blanks;
 - a bundled 169,266-word North American English word-game dictionary;
 - validated custom dictionary selection with a remembered preference;
-- ranked, scrollable word suggestions;
+- ranked, scrollable opening-word and legal-move suggestions;
 - a selectable 15-by-15 board displaying the standard premium layout;
-- manual validated opening-word placement with scoring, undo, and reset;
-- a Place action on suggestions using the selected square and direction; and
+- validated opening and connected move placement with full Scrabble scoring;
+- exact board coordinates and direction for connected suggestions;
+- multi-turn game history with undo and reset; and
 - CMake build configurations for Windows and Debian.
 
-This is currently a **rack solver with an in-progress board workflow**, not yet
-a full board-position solver. The core can represent and score a validated
-opening move, while connected board entry, cross-words, and legal move
-generation are still being developed.
+The app validates the main word and every perpendicular word made by a move.
+It accounts for existing board letters, blanks, unused premium squares, and
+seven-tile bonuses before ranking connected suggestions.
 
 The current development version is **0.1.0**. See [CHANGELOG.md](CHANGELOG.md)
 for milestone details and [docs/ROADMAP.md](docs/ROADMAP.md) for the planned
 path from rack solving to full board-position solving.
 
-## Place an opening suggestion
+## Solve successive turns
 
 1. Enter your rack (use `?` or `*` for a blank) and click **Find words**.
 2. Select the square for the word's first letter and choose **Horizontal** or
    **Vertical** in the opening-move controls.
 3. Click **Place** beside a suggestion. You can also select a result and press
    Enter, or double-click it.
+4. Replace the rack entry with the tiles for the next turn and click
+   **Find words** again.
+5. Choose a ranked legal move. Its row, column, and across/down direction are
+   shown in the result, and **Place** applies that exact move to the board.
 
-The word is checked against the current rack, dictionary, board boundaries,
-and center star before placement. The listed score is the rack tile score;
-the placement message includes board premiums and any seven-tile bonus.
-Blanks are assigned by the core and displayed as zero-point board tiles.
+Every word is checked against the rack, dictionary, board boundaries, and
+connection rules before placement. Opening choices show their rack score and
+the placement message includes opening premiums. Later suggestions show their
+complete board score, including cross-words and bonuses. For those later
+suggestions, blanks are assigned to the highest-scoring valid positions and
+displayed as zero-point tiles.
 
-After placement, use **Undo** to try another opening or **New game** to clear
-the board. Suggestion placement is available only on an empty board for now.
-The rack is still entered manually and is not reduced or refilled automatically.
+Use **Undo** to remove the last placed word without disturbing earlier turns,
+or **New game** to clear the board. The rack is entered manually and is not
+reduced or refilled automatically.
 
 ## Dictionary
 

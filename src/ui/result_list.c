@@ -98,6 +98,24 @@ static GtkWidget *create_result_row(
     gtk_widget_add_css_class(word, "result-word");
     gtk_box_append(GTK_BOX(row), word);
 
+    if (result->has_placement) {
+        char placement_text[32];
+        GtkWidget *placement;
+
+        g_snprintf(
+            placement_text,
+            sizeof(placement_text),
+            "%c%zu %s",
+            (char)('A' + result->move.start.column),
+            result->move.start.row + 1,
+            result->move.direction == SCRABBLE_MOVE_HORIZONTAL
+                ? "across"
+                : "down");
+        placement = gtk_label_new(placement_text);
+        gtk_widget_add_css_class(placement, "placement-chip");
+        gtk_box_append(GTK_BOX(row), placement);
+    }
+
     if (result->rack_match.blanks_used > 0) {
         char blank_text[32];
         GtkWidget *blank_note;
@@ -118,16 +136,33 @@ static GtkWidget *create_result_row(
     gtk_box_append(GTK_BOX(row), score);
     gtk_widget_add_css_class(data->place_button, "secondary-button");
     gtk_widget_add_css_class(data->place_button, "result-place-button");
-    g_snprintf(
-        accessible_text, sizeof(accessible_text),
-        "Place %s at the selected square and direction", result->word);
+    if (result->has_placement) {
+        g_snprintf(
+            accessible_text,
+            sizeof(accessible_text),
+            "Place %s at %c%zu %s",
+            result->word,
+            (char)('A' + result->move.start.column),
+            result->move.start.row + 1,
+            result->move.direction == SCRABBLE_MOVE_HORIZONTAL
+                ? "across"
+                : "down");
+    } else {
+        g_snprintf(
+            accessible_text,
+            sizeof(accessible_text),
+            "Place %s at the selected square and direction",
+            result->word);
+    }
     gtk_accessible_update_property(
         GTK_ACCESSIBLE(data->place_button),
         GTK_ACCESSIBLE_PROPERTY_LABEL, accessible_text, -1);
     gtk_widget_set_tooltip_text(data->place_button,
         result->word[1] == '\0'
             ? "An opening word needs at least two letters."
-            : "Place on an empty board using the selected square and direction.");
+            : result->has_placement
+                ? "Place this legal move at its suggested board position."
+                : "Place on an empty board using the selected square and direction.");
     gtk_box_append(GTK_BOX(row), data->place_button);
     g_signal_connect(data->place_button, "clicked",
                      G_CALLBACK(on_place_clicked), list_row);

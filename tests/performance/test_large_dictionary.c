@@ -18,6 +18,12 @@ typedef struct {
     const char *expected_word;
 } RackScenario;
 
+static ScrabbleBoardPosition position(size_t row, size_t column) {
+    ScrabbleBoardPosition value = {row, column};
+
+    return value;
+}
+
 static int result_set_contains(
     const ScrabbleResultSet *results,
     const char *word) {
@@ -81,9 +87,51 @@ static int repeatedly_solves_full_dictionary(void) {
     return 0;
 }
 
+static int solves_a_full_dictionary_board(void) {
+    const char *opening = "RETAINS";
+    ScrabbleDictionaryStatus dictionary_status;
+    ScrabbleDictionary *dictionary = scrabble_dictionary_load(
+        SCRABBLE_BUNDLED_DICTIONARY_FIXTURE, &dictionary_status);
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleRack rack;
+    ScrabbleResultSet results;
+    clock_t started_at;
+    clock_t finished_at;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT_INT(SCRABBLE_DICTIONARY_OK, dictionary_status);
+    TEST_ASSERT(board != NULL);
+    for (size_t index = 0; opening[index] != '\0'; ++index) {
+        TEST_ASSERT_INT(
+            SCRABBLE_BOARD_OK,
+            scrabble_board_place_tile(
+                board, position(7, 4 + index), opening[index], 0));
+    }
+    TEST_ASSERT_INT(SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "RIN"));
+
+    started_at = clock();
+    TEST_ASSERT_INT(
+        SCRABBLE_SOLVER_OK,
+        scrabble_solve_board(dictionary, &rack, board, &results));
+    finished_at = clock();
+    TEST_ASSERT(result_set_contains(&results, "RAIN"));
+
+    printf(
+        "Found %zu legal board moves in %.3f CPU seconds\n",
+        results.count,
+        (double)(finished_at - started_at) / CLOCKS_PER_SEC);
+
+    scrabble_result_set_destroy(&results);
+    scrabble_board_destroy(board);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
 static const ScrabbleTestCase TESTS[] = {
     {"repeatedly solves the full dictionary",
-     repeatedly_solves_full_dictionary}
+     repeatedly_solves_full_dictionary},
+    {"solves a full-dictionary board",
+     solves_a_full_dictionary_board}
 };
 
 TEST_MAIN(TESTS)

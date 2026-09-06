@@ -102,10 +102,11 @@ headers under that area rather than expanding the public API.
 
 The dictionary keeps its complete, alphabetically sorted word list for the
 public lookup API. It also owns a private index that groups words of up to seven
-letters by length. The rack solver reads this candidate view so it never scans
-words that cannot fit on the current rack. Keeping the index behind
-`src/core/dictionary_internal.h` leaves room for board-specific indexes later
-without committing their representation to the public core API.
+letters by length, allowing opening-rack searches to avoid impossible lengths.
+The board solver first filters the full list against the combined rack and
+board letter inventory, then generates candidates only around occupied squares
+and adjacent anchor squares. Full placement validation remains the final
+authority, so the filters improve speed without changing legal results.
 
 ## Adding a UI component
 
@@ -123,24 +124,25 @@ The `scrabble_ui` library is linked by both the executable and GTK integration
 tests, so tests exercise the production components and main-window wiring.
 Each result row owns a copy of its solver result and passes a temporary copy
 to its callback; the solver can release its result set immediately. The main
-window routes suggestion placement through the current move controls, which
-use the same validation, scoring, and history path as manual word entry.
-Rack and dictionary changes discard the displayed results, while board
-history controls whether their placement actions are enabled.
+window routes opening suggestions through the selected square and direction.
+Connected results retain their validated move, including coordinates,
+direction, and blank mask, and apply that exact move through the same scoring
+and history path as manual entry. Rack, dictionary, and board changes discard
+displayed results so stale placements cannot be applied accidentally.
 
 For a local visual check, set `SCRABBLE_TEST_SCREENSHOT` to an absolute PNG
 path before running the suggestion-placement test. GTK renders the tested
 window after placement; normal test runs do not produce image files.
 
-## Future boundaries
+## Board-solving boundaries
 
-Full board solving should be introduced as additional core modules rather than
-being added to `main_window.c`. Likely boundaries include:
+Board solving is separated into independently testable core responsibilities:
 
-- cross-check generation;
-- connected-move validation;
-- cross-word and connected-move scoring; and
-- candidate generation and ranking.
+- `move_analysis` identifies connectivity and every word formed;
+- `placement` validates dictionary, rack, conflict, and connection rules;
+- `scoring` handles main words, cross-words, premiums, blanks, and bingos; and
+- `solver` generates anchored candidates, optimizes blanks, and ranks moves.
 
-These modules can build on the current dictionary, rack, and scoring APIs while
-remaining independently testable.
+This keeps GTK responsible only for presenting results and dispatching the
+selected move. Cancellation and background execution can be added later
+without moving Scrabble rules into the UI.
