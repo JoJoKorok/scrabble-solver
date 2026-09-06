@@ -1,5 +1,7 @@
 #include "scrabble/scoring.h"
 
+#include "move_analysis.h"
+
 #include <string.h>
 
 static const int TILE_VALUES[26] = {
@@ -17,6 +19,97 @@ static int tile_value(unsigned char letter) {
     }
 
     return TILE_VALUES[letter - 'A'];
+}
+
+static int formed_word_position(
+    const ScrabbleFormedWord *word,
+    size_t index,
+    ScrabbleBoardPosition *position) {
+    if (word == NULL || position == NULL || index >= word->length) {
+        return 0;
+    }
+
+    *position = word->start;
+    if (word->direction == SCRABBLE_MOVE_HORIZONTAL) {
+        position->column += index;
+    } else if (word->direction == SCRABBLE_MOVE_VERTICAL) {
+        position->row += index;
+    } else {
+        return 0;
+    }
+
+    return scrabble_board_position_is_valid(*position);
+}
+
+static int score_formed_word(
+    const ScrabbleBoard *board,
+    const ScrabbleMove *move,
+    const ScrabbleFormedWord *word,
+    int *letter_score,
+    int *word_multiplier) {
+    int letters = 0;
+    int multiplier = 1;
+
+    for (size_t index = 0; index < word->length; ++index) {
+        ScrabbleBoardPosition position;
+        ScrabbleMoveTile move_tile;
+        ScrabbleBoardCell board_cell;
+        ScrabbleBoardPremium premium;
+        size_t move_index;
+        int value;
+        int is_new_tile = 0;
+
+        if (!formed_word_position(word, index, &position)) {
+            return 0;
+        }
+
+        if (scrabble_move_index_at_position(
+                move, position, &move_index) &&
+            scrabble_move_tile_at(move, move_index, &move_tile) ==
+                SCRABBLE_MOVE_OK &&
+            move_tile.from_rack) {
+            value = move_tile.is_blank
+                        ? 0
+                        : tile_value((unsigned char)move_tile.letter);
+            is_new_tile = 1;
+        } else {
+            if (scrabble_board_get_cell(board, position, &board_cell) !=
+                    SCRABBLE_BOARD_OK ||
+                board_cell.letter == '\0') {
+                return 0;
+            }
+            value = board_cell.is_blank
+                        ? 0
+                        : tile_value((unsigned char)board_cell.letter);
+        }
+
+        if (value < 0) {
+            return 0;
+        }
+
+        if (is_new_tile) {
+            if (scrabble_board_get_premium(position, &premium) !=
+                SCRABBLE_BOARD_OK) {
+                return 0;
+            }
+
+            if (premium == SCRABBLE_BOARD_DOUBLE_LETTER) {
+                value *= 2;
+            } else if (premium == SCRABBLE_BOARD_TRIPLE_LETTER) {
+                value *= 3;
+            } else if (premium == SCRABBLE_BOARD_DOUBLE_WORD) {
+                multiplier *= 2;
+            } else if (premium == SCRABBLE_BOARD_TRIPLE_WORD) {
+                multiplier *= 3;
+            }
+        }
+
+        letters += value;
+    }
+
+    *letter_score = letters;
+    *word_multiplier = multiplier;
+    return 1;
 }
 
 int scrabble_score_word(const char *word) {
@@ -96,7 +189,8 @@ static int canonicalize_opening_move(
     ScrabbleMove *candidate) {
     ScrabbleMoveTileMask all_tiles;
 
-    if (scrabble_move_init(
+    if (move->word[SCRABBLE_MAX_WORD_LENGTH] != '\0' ||
+        scrabble_move_init(
             candidate, move->word, move->start, move->direction) !=
             SCRABBLE_MOVE_OK ||
         candidate->length != move->length ||
@@ -123,7 +217,13 @@ ScrabbleScoringStatus scrabble_score_opening_move(
         SCRABBLE_BOARD_CENTER_INDEX
     };
     ScrabbleMove candidate;
-    ScrabbleMoveScore result = {0, 1, 0, 0};
+    ScrabbleMoveScore result = {
+        .letter_score = 0,
+        .word_multiplier = 1,
+        .cross_word_score = 0,
+        .bingo_bonus = 0,
+        .total_score = 0
+    };
 
     if (score != NULL) {
         memset(score, 0, sizeof(*score));
@@ -173,6 +273,66 @@ ScrabbleScoringStatus scrabble_score_opening_move(
     }
     result.total_score =
         result.letter_score * result.word_multiplier + result.bingo_bonus;
+    *score = result;
+    return SCRABBLE_SCORING_OK;
+}
+
+ScrabbleScoringStatus scrabble_score_move(
+    const ScrabbleBoard *board,
+    const ScrabbleMove *move,
+    ScrabbleMoveScore *score) {
+    ScrabbleMoveAnalysis analysis;
+    ScrabbleMoveScore result = {
+        .letter_score = 0,
+        .word_multiplier = 1,
+        .cross_word_score = 0,
+        .bingo_bonus = 0,
+        .total_score = 0
+    };
+
+    if (score != NULL) {
+        memset(score, 0, sizeof(*score));
+    }
+    if (board == NULL || move == NULL || score == NULL) {
+        return SCRABBLE_SCORING_INVALID_ARGUMENT;
+    }
+
+    if (scrabble_move_analyze_board(board, move, &analysis) !=
+            SCRABBLE_MOVE_ANALYSIS_OK ||
+        !analysis.is_connected ||
+        scrabble_move_rack_tile_count(&analysis.move) >
+            SCRABBLE_RACK_CAPACITY) {
+        return SCRABBLE_SCORING_INVALID_MOVE;
+    }
+
+    for (size_t index = 0; index < analysis.word_count; ++index) {
+        int letters;
+        int multiplier;
+
+        if (!score_formed_word(
+                board,
+                &analysis.move,
+                &analysis.words[index],
+                &letters,
+                &multiplier)) {
+            return SCRABBLE_SCORING_INVALID_MOVE;
+        }
+
+        if (index == 0) {
+            result.letter_score = letters;
+            result.word_multiplier = multiplier;
+        } else {
+            result.cross_word_score += letters * multiplier;
+        }
+    }
+
+    if (scrabble_move_rack_tile_count(&analysis.move) ==
+        SCRABBLE_RACK_CAPACITY) {
+        result.bingo_bonus = 50;
+    }
+    result.total_score =
+        result.letter_score * result.word_multiplier +
+        result.cross_word_score + result.bingo_bonus;
     *score = result;
     return SCRABBLE_SCORING_OK;
 }

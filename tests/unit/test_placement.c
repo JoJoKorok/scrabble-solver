@@ -19,6 +19,218 @@ static ScrabbleDictionary *load_dictionary(void) {
     return status == SCRABBLE_DICTIONARY_OK ? dictionary : NULL;
 }
 
+static ScrabbleBoard *create_cross_word_board(void) {
+    ScrabbleBoard *board = scrabble_board_create();
+
+    if (board == NULL ||
+        scrabble_board_place_tile(board, position(7, 4), 'R', 0) !=
+            SCRABBLE_BOARD_OK ||
+        scrabble_board_place_tile(board, position(7, 5), 'A', 0) !=
+            SCRABBLE_BOARD_OK ||
+        scrabble_board_place_tile(board, position(7, 6), 'I', 0) !=
+            SCRABBLE_BOARD_OK) {
+        scrabble_board_destroy(board);
+        return NULL;
+    }
+
+    return board;
+}
+
+static int validates_and_applies_connected_words(void) {
+    ScrabbleDictionary *dictionary = load_dictionary();
+    ScrabbleBoard *board = create_cross_word_board();
+    ScrabbleRack rack;
+    ScrabbleMove move;
+    ScrabbleMove validated;
+    ScrabbleMove applied;
+    ScrabbleBoardCell cell;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "TRAIN"));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "TRAIN", position(3, 7), SCRABBLE_MOVE_VERTICAL));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_OK,
+        scrabble_connected_move_validate(
+            board, dictionary, &rack, &move, &validated));
+    TEST_ASSERT_INT(5, scrabble_move_rack_tile_count(&validated));
+    TEST_ASSERT_INT(3, scrabble_board_tile_count(board));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_OK,
+        scrabble_connected_move_apply(
+            board, dictionary, &rack, &move, &applied));
+    TEST_ASSERT_INT(8, scrabble_board_tile_count(board));
+    TEST_ASSERT_STRING("TRAIN", applied.word);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_cell(board, position(7, 7), &cell));
+    TEST_ASSERT_INT('N', cell.letter);
+    TEST_ASSERT_INT(0, cell.is_blank);
+
+    scrabble_board_destroy(board);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
+static int reuses_board_blanks_and_assigns_new_blanks(void) {
+    ScrabbleDictionary *dictionary = load_dictionary();
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleRack rack;
+    ScrabbleMove move;
+    ScrabbleMove validated;
+    ScrabbleMoveTile tile;
+    ScrabbleBoardCell cell;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 7), 'A', 1));
+    TEST_ASSERT_INT(
+        SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "RI?"));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "RAIN", position(6, 7), SCRABBLE_MOVE_VERTICAL));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_OK,
+        scrabble_connected_move_validate(
+            board, dictionary, &rack, &move, &validated));
+    TEST_ASSERT_INT(3, scrabble_move_rack_tile_count(&validated));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_tile_at(&validated, 1, &tile));
+    TEST_ASSERT_INT(0, tile.from_rack);
+    TEST_ASSERT_INT(0, tile.is_blank);
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_tile_at(&validated, 3, &tile));
+    TEST_ASSERT_INT(1, tile.from_rack);
+    TEST_ASSERT_INT(1, tile.is_blank);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_cell(board, position(7, 7), &cell));
+    TEST_ASSERT_INT(1, cell.is_blank);
+
+    scrabble_board_destroy(board);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
+static int rejects_disconnected_incomplete_and_invalid_cross_words(void) {
+    ScrabbleDictionary *dictionary = load_dictionary();
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleRack rack;
+    ScrabbleMove move;
+    ScrabbleMove output;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "TRAIN"));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "TRAIN", position(0, 0), SCRABBLE_MOVE_VERTICAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_BOARD_EMPTY,
+        scrabble_connected_move_validate(
+            board, dictionary, &rack, &move, NULL));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(14, 14), 'A', 0));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_MOVE_NOT_CONNECTED,
+        scrabble_connected_move_validate(
+            board, dictionary, &rack, &move, NULL));
+
+    scrabble_board_clear(board);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 3), 'T', 0));
+    TEST_ASSERT_INT(
+        SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "RAIN"));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "RAIN", position(7, 4), SCRABBLE_MOVE_HORIZONTAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INCOMPLETE_WORD,
+        scrabble_connected_move_validate(
+            board, dictionary, &rack, &move, NULL));
+
+    scrabble_board_clear(board);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_place_tile(board, position(7, 6), 'X', 0));
+    TEST_ASSERT_INT(
+        SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "TRAIN"));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "TRAIN", position(3, 7), SCRABBLE_MOVE_VERTICAL));
+    memset(&output, 0xFF, sizeof(output));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_CROSS_WORD_NOT_IN_DICTIONARY,
+        scrabble_connected_move_apply(
+            board, dictionary, &rack, &move, &output));
+    TEST_ASSERT_INT(0, output.length);
+    TEST_ASSERT_INT(1, scrabble_board_tile_count(board));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_connected_move_validate(
+            NULL, dictionary, &rack, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_connected_move_validate(
+            board, NULL, &rack, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_connected_move_validate(
+            board, dictionary, NULL, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_connected_move_apply(
+            board, dictionary, &rack, NULL, NULL));
+
+    scrabble_board_destroy(board);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
+static int rejects_connected_rack_mismatches_atomically(void) {
+    ScrabbleDictionary *dictionary = load_dictionary();
+    ScrabbleBoard *board = create_cross_word_board();
+    ScrabbleRack rack;
+    ScrabbleMove move;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "XXXXX"));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "TRAIN", position(3, 7), SCRABBLE_MOVE_VERTICAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_RACK_MISMATCH,
+        scrabble_connected_move_apply(
+            board, dictionary, &rack, &move, NULL));
+    TEST_ASSERT_INT(3, scrabble_board_tile_count(board));
+
+    scrabble_board_destroy(board);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
 static int resolves_matching_board_letters(void) {
     ScrabbleBoard *board = scrabble_board_create();
     ScrabbleMove move;
@@ -382,6 +594,14 @@ static int rejects_invalid_opening_moves_atomically(void) {
 }
 
 static const ScrabbleTestCase TESTS[] = {
+    {"validates and applies connected words",
+     validates_and_applies_connected_words},
+    {"reuses board blanks and assigns new blanks",
+     reuses_board_blanks_and_assigns_new_blanks},
+    {"rejects disconnected, incomplete, and invalid cross words",
+     rejects_disconnected_incomplete_and_invalid_cross_words},
+    {"rejects connected rack mismatches atomically",
+     rejects_connected_rack_mismatches_atomically},
     {"resolves matching board letters",
      resolves_matching_board_letters},
     {"rejects conflicting board letters atomically",

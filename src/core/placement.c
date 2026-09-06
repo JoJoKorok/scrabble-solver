@@ -1,5 +1,7 @@
 #include "scrabble/placement.h"
 
+#include "move_analysis.h"
+
 #include <string.h>
 
 static int letter_index(char letter) {
@@ -55,7 +57,7 @@ static int assign_and_consume_rack_tiles(
     unsigned char available[SCRABBLE_ALPHABET_SIZE];
     unsigned char blanks_available = rack->blank_count;
 
-    if (move->length > rack->tile_count) {
+    if (scrabble_move_rack_tile_count(move) > rack->tile_count) {
         return 0;
     }
 
@@ -65,6 +67,10 @@ static int assign_and_consume_rack_tiles(
 
         if (scrabble_move_tile_at(move, index, &tile) != SCRABBLE_MOVE_OK) {
             return 0;
+        }
+
+        if (!tile.from_rack) {
+            continue;
         }
 
         if (tile.is_blank) {
@@ -83,7 +89,7 @@ static int assign_and_consume_rack_tiles(
             return 0;
         }
 
-        if (tile.is_blank) {
+        if (!tile.from_rack || tile.is_blank) {
             continue;
         }
 
@@ -250,6 +256,138 @@ ScrabblePlacementStatus scrabble_opening_move_apply(
                 tile.letter,
                 tile.is_blank) != SCRABBLE_BOARD_OK) {
             scrabble_board_clear(board);
+            return SCRABBLE_PLACEMENT_BOARD_UPDATE_FAILED;
+        }
+    }
+
+    if (applied_move != NULL) {
+        *applied_move = candidate;
+    }
+    return SCRABBLE_PLACEMENT_OK;
+}
+
+ScrabblePlacementStatus scrabble_connected_move_validate(
+    const ScrabbleBoard *board,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *validated_move) {
+    ScrabbleMove proposal;
+    ScrabbleMove candidate;
+    ScrabbleMoveAnalysis analysis;
+    ScrabbleMoveAnalysisStatus analysis_status;
+    ScrabblePlacementStatus status;
+
+    if (move != NULL) {
+        proposal = *move;
+    }
+    if (validated_move != NULL) {
+        memset(validated_move, 0, sizeof(*validated_move));
+    }
+
+    if (board == NULL || dictionary == NULL || rack == NULL || move == NULL) {
+        return SCRABBLE_PLACEMENT_INVALID_ARGUMENT;
+    }
+    if (scrabble_board_is_empty(board)) {
+        return SCRABBLE_PLACEMENT_BOARD_EMPTY;
+    }
+
+    status = scrabble_move_resolve_board_tiles(board, &proposal, &candidate);
+    if (status != SCRABBLE_PLACEMENT_OK) {
+        return status;
+    }
+
+    analysis_status =
+        scrabble_move_analyze_board(board, &candidate, &analysis);
+    if (analysis_status == SCRABBLE_MOVE_ANALYSIS_INCOMPLETE_WORD) {
+        return SCRABBLE_PLACEMENT_INCOMPLETE_WORD;
+    }
+    if (analysis_status != SCRABBLE_MOVE_ANALYSIS_OK) {
+        return SCRABBLE_PLACEMENT_INVALID_MOVE;
+    }
+    if (!analysis.is_connected) {
+        return SCRABBLE_PLACEMENT_MOVE_NOT_CONNECTED;
+    }
+
+    if (!scrabble_dictionary_contains(
+            dictionary, analysis.words[0].text)) {
+        return SCRABBLE_PLACEMENT_WORD_NOT_IN_DICTIONARY;
+    }
+    for (size_t index = 1; index < analysis.word_count; ++index) {
+        if (!scrabble_dictionary_contains(
+                dictionary, analysis.words[index].text)) {
+            return SCRABBLE_PLACEMENT_CROSS_WORD_NOT_IN_DICTIONARY;
+        }
+    }
+
+    if (!assign_and_consume_rack_tiles(rack, &candidate)) {
+        return SCRABBLE_PLACEMENT_RACK_MISMATCH;
+    }
+
+    if (validated_move != NULL) {
+        *validated_move = candidate;
+    }
+    return SCRABBLE_PLACEMENT_OK;
+}
+
+static void remove_placed_tiles(
+    ScrabbleBoard *board,
+    const ScrabbleMove *move,
+    size_t placed_through_index) {
+    for (size_t index = 0; index < placed_through_index; ++index) {
+        ScrabbleMoveTile tile;
+
+        if (scrabble_move_tile_at(move, index, &tile) ==
+                SCRABBLE_MOVE_OK &&
+            tile.from_rack) {
+            scrabble_board_remove_tile(board, tile.position, NULL);
+        }
+    }
+}
+
+ScrabblePlacementStatus scrabble_connected_move_apply(
+    ScrabbleBoard *board,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *applied_move) {
+    ScrabbleMove proposal;
+    ScrabbleMove candidate;
+    ScrabblePlacementStatus status;
+
+    if (move != NULL) {
+        proposal = *move;
+    }
+    if (applied_move != NULL) {
+        memset(applied_move, 0, sizeof(*applied_move));
+    }
+
+    status = scrabble_connected_move_validate(
+        board,
+        dictionary,
+        rack,
+        move == NULL ? NULL : &proposal,
+        &candidate);
+    if (status != SCRABBLE_PLACEMENT_OK) {
+        return status;
+    }
+
+    for (size_t index = 0; index < candidate.length; ++index) {
+        ScrabbleMoveTile tile;
+
+        if (scrabble_move_tile_at(&candidate, index, &tile) !=
+            SCRABBLE_MOVE_OK) {
+            remove_placed_tiles(board, &candidate, index);
+            return SCRABBLE_PLACEMENT_BOARD_UPDATE_FAILED;
+        }
+
+        if (tile.from_rack &&
+            scrabble_board_place_tile(
+                board,
+                tile.position,
+                tile.letter,
+                tile.is_blank) != SCRABBLE_BOARD_OK) {
+            remove_placed_tiles(board, &candidate, index);
             return SCRABBLE_PLACEMENT_BOARD_UPDATE_FAILED;
         }
     }

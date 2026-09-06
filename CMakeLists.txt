@@ -26,6 +26,7 @@ add_library(scrabble_core
   src/core/dictionary.c
   src/core/game.c
   src/core/move.c
+  src/core/move_analysis.c
   src/core/placement.c
   src/core/rack.c
   src/core/scoring.c

@@ -205,6 +205,65 @@ ScrabbleGameStatus scrabble_game_apply_opening_move(
     return SCRABBLE_GAME_OK;
 }
 
+ScrabbleGameStatus scrabble_game_apply_move(
+    ScrabbleGame *game,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *applied_move,
+    ScrabblePlacementStatus *placement_status) {
+    ScrabbleMove proposal;
+    ScrabbleMove validated;
+    ScrabbleMove applied;
+    ScrabbleMoveScore score;
+    ScrabblePlacementStatus status;
+
+    if (move != NULL) {
+        proposal = *move;
+    }
+    if (applied_move != NULL) {
+        memset(applied_move, 0, sizeof(*applied_move));
+    }
+    set_placement_status(placement_status, SCRABBLE_PLACEMENT_OK);
+
+    if (game == NULL || dictionary == NULL || rack == NULL || move == NULL) {
+        set_placement_status(
+            placement_status, SCRABBLE_PLACEMENT_INVALID_ARGUMENT);
+        return SCRABBLE_GAME_INVALID_ARGUMENT;
+    }
+
+    status = scrabble_connected_move_validate(
+        game->board, dictionary, rack, &proposal, &validated);
+    if (status != SCRABBLE_PLACEMENT_OK) {
+        set_placement_status(placement_status, status);
+        return SCRABBLE_GAME_PLACEMENT_REJECTED;
+    }
+
+    if (scrabble_score_move(game->board, &validated, &score) !=
+        SCRABBLE_SCORING_OK) {
+        return SCRABBLE_GAME_BOARD_STATE_ERROR;
+    }
+
+    if (!reserve_turn(game)) {
+        return SCRABBLE_GAME_OUT_OF_MEMORY;
+    }
+
+    status = scrabble_connected_move_apply(
+        game->board, dictionary, rack, &validated, &applied);
+    if (status != SCRABBLE_PLACEMENT_OK) {
+        set_placement_status(placement_status, status);
+        return SCRABBLE_GAME_BOARD_STATE_ERROR;
+    }
+
+    game->turns[game->move_count].move = applied;
+    game->turns[game->move_count].score = score;
+    ++game->move_count;
+    if (applied_move != NULL) {
+        *applied_move = applied;
+    }
+    return SCRABBLE_GAME_OK;
+}
+
 ScrabbleGameStatus scrabble_game_undo_last_move(
     ScrabbleGame *game,
     ScrabbleMove *undone_move) {

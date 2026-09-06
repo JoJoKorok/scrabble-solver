@@ -16,6 +16,10 @@ typedef enum {
     SCRABBLE_PLACEMENT_RACK_MISMATCH,
     SCRABBLE_PLACEMENT_LETTER_CONFLICT,
     SCRABBLE_PLACEMENT_NO_NEW_TILES,
+    SCRABBLE_PLACEMENT_BOARD_EMPTY,
+    SCRABBLE_PLACEMENT_MOVE_NOT_CONNECTED,
+    SCRABBLE_PLACEMENT_INCOMPLETE_WORD,
+    SCRABBLE_PLACEMENT_CROSS_WORD_NOT_IN_DICTIONARY,
     SCRABBLE_PLACEMENT_BOARD_UPDATE_FAILED
 } ScrabblePlacementStatus;
 
@@ -42,6 +46,24 @@ ScrabblePlacementStatus scrabble_opening_move_validate(
 /* Validates and atomically places the first word. applied_move may be NULL;
    otherwise it receives the applied move with blank assignments preserved. */
 ScrabblePlacementStatus scrabble_opening_move_apply(
+    ScrabbleBoard *board,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *applied_move);
+
+/* Validates a move after the opening turn. Every formed word must be in the
+   dictionary, the move must connect to the board, and only new tiles consume
+   the rack. The board is never changed by validation. */
+ScrabblePlacementStatus scrabble_connected_move_validate(
+    const ScrabbleBoard *board,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *validated_move);
+
+/* Validates and atomically places a connected move. */
+ScrabblePlacementStatus scrabble_connected_move_apply(
     ScrabbleBoard *board,
     const ScrabbleDictionary *dictionary,
     const ScrabbleRack *rack,

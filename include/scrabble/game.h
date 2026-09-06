@@ -54,6 +54,15 @@ ScrabbleGameStatus scrabble_game_apply_opening_move(
     ScrabbleMove *applied_move,
     ScrabblePlacementStatus *placement_status);
 
+/* Applies and records a connected move after the opening turn. */
+ScrabbleGameStatus scrabble_game_apply_move(
+    ScrabbleGame *game,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *applied_move,
+    ScrabblePlacementStatus *placement_status);
+
 /* Removes only the rack tiles introduced by the most recent move. */
 ScrabbleGameStatus scrabble_game_undo_last_move(
     ScrabbleGame *game,
