@@ -78,6 +78,65 @@ static int validates_and_applies_connected_words(void) {
     return 0;
 }
 
+static int validates_connected_board_rules_without_a_rack(void) {
+    ScrabbleDictionary *dictionary = load_dictionary();
+    ScrabbleBoard *board = create_cross_word_board();
+    ScrabbleRack rack;
+    ScrabbleMove move;
+    ScrabbleMove validated;
+    ScrabbleMoveTile tile;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "TRAIN", position(3, 7), SCRABBLE_MOVE_VERTICAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_set_tile_blank(&move, 0, 1));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_OK,
+        scrabble_connected_move_validate_board(
+            board, dictionary, &move, &validated));
+    TEST_ASSERT_INT(5, scrabble_move_rack_tile_count(&validated));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_tile_at(&validated, 0, &tile));
+    TEST_ASSERT_INT(1, tile.is_blank);
+    TEST_ASSERT_INT(3, scrabble_board_tile_count(board));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "XXXXX"));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_RACK_MISMATCH,
+        scrabble_connected_move_validate(
+            board, dictionary, &rack, &move, NULL));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "TRAIN", position(0, 0), SCRABBLE_MOVE_VERTICAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_MOVE_NOT_CONNECTED,
+        scrabble_connected_move_validate_board(
+            board, dictionary, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_connected_move_validate_board(
+            NULL, dictionary, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_connected_move_validate_board(
+            board, NULL, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_connected_move_validate_board(
+            board, dictionary, NULL, NULL));
+
+    scrabble_board_destroy(board);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
 static int reuses_board_blanks_and_assigns_new_blanks(void) {
     ScrabbleDictionary *dictionary = load_dictionary();
     ScrabbleBoard *board = scrabble_board_create();
@@ -404,6 +463,57 @@ static int validates_without_changing_the_board(void) {
     return 0;
 }
 
+static int validates_opening_board_rules_without_a_rack(void) {
+    ScrabbleDictionary *dictionary = load_dictionary();
+    ScrabbleBoard *board = scrabble_board_create();
+    ScrabbleRack rack;
+    ScrabbleMove move;
+    ScrabbleMove validated;
+    ScrabbleMoveTile tile;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT(board != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "RETAINS", position(7, 4), SCRABBLE_MOVE_HORIZONTAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_set_tile_blank(&move, 3, 1));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_OK,
+        scrabble_opening_move_validate_board(
+            board, dictionary, &move, &validated));
+    TEST_ASSERT(scrabble_board_is_empty(board));
+    TEST_ASSERT_STRING("RETAINS", validated.word);
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_tile_at(&validated, 3, &tile));
+    TEST_ASSERT_INT(1, tile.is_blank);
+
+    TEST_ASSERT_INT(
+        SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "XXXXXXX"));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_RACK_MISMATCH,
+        scrabble_opening_move_validate(
+            board, dictionary, &rack, &move, NULL));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_opening_move_validate_board(
+            NULL, dictionary, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_opening_move_validate_board(
+            board, NULL, &move, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT,
+        scrabble_opening_move_validate_board(
+            board, dictionary, NULL, NULL));
+
+    scrabble_board_destroy(board);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
 static int applies_a_centered_horizontal_word(void) {
     ScrabbleDictionary *dictionary = load_dictionary();
     ScrabbleBoard *board = scrabble_board_create();
@@ -596,6 +706,8 @@ static int rejects_invalid_opening_moves_atomically(void) {
 static const ScrabbleTestCase TESTS[] = {
     {"validates and applies connected words",
      validates_and_applies_connected_words},
+    {"validates connected board rules without a rack",
+     validates_connected_board_rules_without_a_rack},
     {"reuses board blanks and assigns new blanks",
      reuses_board_blanks_and_assigns_new_blanks},
     {"rejects disconnected, incomplete, and invalid cross words",
@@ -612,6 +724,8 @@ static const ScrabbleTestCase TESTS[] = {
      leaves_connectivity_for_later_validation},
     {"validates without changing the board",
      validates_without_changing_the_board},
+    {"validates opening board rules without a rack",
+     validates_opening_board_rules_without_a_rack},
     {"applies a centered horizontal word",
      applies_a_centered_horizontal_word},
     {"assigns and preserves blank tiles",

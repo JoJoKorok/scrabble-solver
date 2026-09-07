@@ -166,10 +166,9 @@ ScrabblePlacementStatus scrabble_move_resolve_board_tiles(
     return SCRABBLE_PLACEMENT_OK;
 }
 
-ScrabblePlacementStatus scrabble_opening_move_validate(
+ScrabblePlacementStatus scrabble_opening_move_validate_board(
     const ScrabbleBoard *board,
     const ScrabbleDictionary *dictionary,
-    const ScrabbleRack *rack,
     const ScrabbleMove *move,
     ScrabbleMove *validated_move) {
     ScrabbleBoardPosition center = {
@@ -187,7 +186,7 @@ ScrabblePlacementStatus scrabble_opening_move_validate(
         memset(validated_move, 0, sizeof(*validated_move));
     }
 
-    if (board == NULL || dictionary == NULL || rack == NULL || move == NULL) {
+    if (board == NULL || dictionary == NULL || move == NULL) {
         return SCRABBLE_PLACEMENT_INVALID_ARGUMENT;
     }
 
@@ -208,6 +207,37 @@ ScrabblePlacementStatus scrabble_opening_move_validate(
         return SCRABBLE_PLACEMENT_WORD_NOT_IN_DICTIONARY;
     }
 
+    if (validated_move != NULL) {
+        *validated_move = candidate;
+    }
+    return SCRABBLE_PLACEMENT_OK;
+}
+
+ScrabblePlacementStatus scrabble_opening_move_validate(
+    const ScrabbleBoard *board,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *validated_move) {
+    ScrabbleMove proposal;
+    ScrabbleMove candidate;
+    ScrabblePlacementStatus status;
+
+    if (move != NULL) {
+        proposal = *move;
+    }
+    if (validated_move != NULL) {
+        memset(validated_move, 0, sizeof(*validated_move));
+    }
+    if (board == NULL || dictionary == NULL || rack == NULL || move == NULL) {
+        return SCRABBLE_PLACEMENT_INVALID_ARGUMENT;
+    }
+
+    status = scrabble_opening_move_validate_board(
+        board, dictionary, &proposal, &candidate);
+    if (status != SCRABBLE_PLACEMENT_OK) {
+        return status;
+    }
     if (!assign_and_consume_rack_tiles(rack, &candidate)) {
         return SCRABBLE_PLACEMENT_RACK_MISMATCH;
     }
@@ -266,10 +296,9 @@ ScrabblePlacementStatus scrabble_opening_move_apply(
     return SCRABBLE_PLACEMENT_OK;
 }
 
-ScrabblePlacementStatus scrabble_connected_move_validate(
+ScrabblePlacementStatus scrabble_connected_move_validate_board(
     const ScrabbleBoard *board,
     const ScrabbleDictionary *dictionary,
-    const ScrabbleRack *rack,
     const ScrabbleMove *move,
     ScrabbleMove *validated_move) {
     ScrabbleMove proposal;
@@ -285,7 +314,7 @@ ScrabblePlacementStatus scrabble_connected_move_validate(
         memset(validated_move, 0, sizeof(*validated_move));
     }
 
-    if (board == NULL || dictionary == NULL || rack == NULL || move == NULL) {
+    if (board == NULL || dictionary == NULL || move == NULL) {
         return SCRABBLE_PLACEMENT_INVALID_ARGUMENT;
     }
     if (scrabble_board_is_empty(board)) {
@@ -320,6 +349,37 @@ ScrabblePlacementStatus scrabble_connected_move_validate(
         }
     }
 
+    if (validated_move != NULL) {
+        *validated_move = candidate;
+    }
+    return SCRABBLE_PLACEMENT_OK;
+}
+
+ScrabblePlacementStatus scrabble_connected_move_validate(
+    const ScrabbleBoard *board,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *validated_move) {
+    ScrabbleMove proposal;
+    ScrabbleMove candidate;
+    ScrabblePlacementStatus status;
+
+    if (move != NULL) {
+        proposal = *move;
+    }
+    if (validated_move != NULL) {
+        memset(validated_move, 0, sizeof(*validated_move));
+    }
+    if (board == NULL || dictionary == NULL || rack == NULL || move == NULL) {
+        return SCRABBLE_PLACEMENT_INVALID_ARGUMENT;
+    }
+
+    status = scrabble_connected_move_validate_board(
+        board, dictionary, &proposal, &candidate);
+    if (status != SCRABBLE_PLACEMENT_OK) {
+        return status;
+    }
     if (!assign_and_consume_rack_tiles(rack, &candidate)) {
         return SCRABBLE_PLACEMENT_RACK_MISMATCH;
     }

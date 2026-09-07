@@ -140,10 +140,17 @@ window after placement; normal test runs do not produce image files.
 Board solving is separated into independently testable core responsibilities:
 
 - `move_analysis` identifies connectivity and every word formed;
-- `placement` validates dictionary, rack, conflict, and connection rules;
+- `placement` validates board and dictionary rules first, then layers rack
+  ownership and automatic blank assignment onto player moves;
 - `scoring` handles main words, cross-words, premiums, blanks, and bingos; and
 - `solver` generates anchored candidates, optimizes blanks, and ranks moves.
 
 This keeps GTK responsible only for presenting results and dispatching the
 selected move. Cancellation and background execution can be added later
 without moving Scrabble rules into the UI.
+
+The rack-independent placement validators preserve explicit blank markers and
+resolve existing board intersections without mutating the board. This shared
+layer allows future known moves, such as an opponent's visible play, to use the
+same geometry, connectivity, and dictionary authority without pretending the
+tiles came from the user's rack.

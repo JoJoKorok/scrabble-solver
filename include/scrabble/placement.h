@@ -33,9 +33,18 @@ ScrabblePlacementStatus scrabble_move_resolve_board_tiles(
     const ScrabbleMove *move,
     ScrabbleMove *resolved_move);
 
+/* Validates opening geometry and dictionary membership without checking a
+   particular rack. Explicit blank markers are preserved. This is the shared
+   board-rule layer for known moves; it does not assign missing blanks. */
+ScrabblePlacementStatus scrabble_opening_move_validate_board(
+    const ScrabbleBoard *board,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleMove *move,
+    ScrabbleMove *validated_move);
+
 /* Validates the special rules for the first move. validated_move may be NULL;
-   otherwise it receives a copy with required blank tiles assigned. The board
-   is never changed by validation. */
+   otherwise it receives a board-valid copy with required blank tiles assigned
+   from rack. The board is never changed by validation. */
 ScrabblePlacementStatus scrabble_opening_move_validate(
     const ScrabbleBoard *board,
     const ScrabbleDictionary *dictionary,
@@ -51,6 +60,15 @@ ScrabblePlacementStatus scrabble_opening_move_apply(
     const ScrabbleRack *rack,
     const ScrabbleMove *move,
     ScrabbleMove *applied_move);
+
+/* Validates connected geometry, board conflicts, and every formed dictionary
+   word without checking a particular rack. Existing board intersections are
+   resolved in validated_move and explicit new-tile blank markers are kept. */
+ScrabblePlacementStatus scrabble_connected_move_validate_board(
+    const ScrabbleBoard *board,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleMove *move,
+    ScrabbleMove *validated_move);
 
 /* Validates a move after the opening turn. Every formed word must be in the
    dictionary, the move must connect to the board, and only new tiles consume
