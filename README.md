@@ -202,6 +202,7 @@ src/core/               Platform-independent solver implementation
 src/platform/           Cross-platform resource discovery
 src/ui/                 GTK application and reusable interface components
 tests/fixtures/         Small deterministic test data
+tests/integration/      End-to-end portable gameplay workflows
 tests/performance/      Full-dictionary performance regression coverage
 tests/support/          Lightweight shared C test utilities
 tests/ui/               GTK workflow tests with isolated settings

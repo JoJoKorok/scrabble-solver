@@ -36,6 +36,8 @@ target_include_directories(test_dictionary PRIVATE
   ${PROJECT_SOURCE_DIR}/src/core
 )
 add_scrabble_test(test_solver unit/test_solver.c)
+add_scrabble_test(test_gameplay integration/test_gameplay.c)
+set_tests_properties(test_gameplay PROPERTIES LABELS "core;integration")
 add_scrabble_test(test_version unit/test_version.c)
 target_compile_definitions(test_version PRIVATE
   SCRABBLE_TEST_PROJECT_VERSION="${PROJECT_VERSION}"

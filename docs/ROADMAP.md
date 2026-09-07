@@ -25,7 +25,7 @@ Status: in progress
 
 ## 0.3 - Board model and scoring
 
-Status: in progress
+Status: complete
 
 - [x] Represent the 15-by-15 board and premium-square layout in the core.
 - [x] Display an accessible, selectable board in the desktop interface.
@@ -34,6 +34,7 @@ Status: in progress
 - [x] Validate tile placement, connectivity, and formed cross-words.
 - [x] Score main words, cross-words, premiums, blanks, and seven-tile bingos.
 - [x] Add deterministic unit tests for completed board rules.
+- [x] Exercise multi-turn solving, placement, undo, and reset end to end.
 
 ## 0.4 - Full move generation
 

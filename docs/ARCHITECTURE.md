@@ -41,6 +41,7 @@ Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
 | `src/ui/rack_view.*` | Visual representation of the seven-tile rack |
 | `src/ui/result_list.*` | Owning displayed result copies and emitting placement requests |
 | `src/ui/theme.*` | Application-wide GTK stylesheet loading |
+| `tests/integration/` | End-to-end portable workflows spanning solver, game, and board state |
 | `tests/performance/` | Deterministic checks against the full bundled dictionary |
 | `tests/unit/` | Focused behavior tests corresponding to production modules |
 | `tests/ui/` | GTK workflow integration tests with isolated user settings |

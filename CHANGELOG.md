@@ -40,6 +40,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
 - Ranked legal board suggestions with exact coordinates and direction,
   highest-scoring blank assignment, direct placement, and full-dictionary
   performance coverage.
+- End-to-end multi-turn gameplay coverage for suggested moves, board-edge
+  placement, no-move racks, repeated undo, reset, and starting a fresh game.
 
 ### Planned
 

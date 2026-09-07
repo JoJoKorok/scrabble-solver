@@ -169,6 +169,15 @@ static void assert_word(
     }
 }
 
+static void assert_board_empty(WindowFixture *fixture) {
+    for (size_t row = 0; row < SCRABBLE_BOARD_SIZE; ++row) {
+        for (size_t column = 0; column < SCRABBLE_BOARD_SIZE; ++column) {
+            g_assert_false(gtk_widget_has_css_class(
+                square(fixture, row, column), "board-tile-filled"));
+        }
+    }
+}
+
 /* Optional visual artifact, rendered by GTK without desktop input automation. */
 static void save_window_snapshot(WindowFixture *fixture) {
     const char *path = g_getenv("SCRABBLE_TEST_SCREENSHOT");
@@ -254,9 +263,35 @@ static void places_opening_and_connected_suggestions(
         square(fixture, 6, 7), "board-tile-filled"));
     assert_word(fixture, "RETAINS", 7, 4, FALSE);
 
+    g_test_message("Replaying a move, then starting a clean new game");
+    search(fixture, "RIN");
+    row = result_row_at(fixture->results, "RAIN", "H7 down");
+    click(find_button(GTK_WIDGET(row), "Place"));
+    search(fixture, "TRAIN");
+    g_assert_nonnull(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
+    click(find_button(fixture->controls, "New game"));
+    assert_board_empty(fixture);
+    g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
+    g_assert_false(gtk_widget_get_sensitive(
+        find_button(fixture->controls, "Undo")));
+    g_assert_cmpuint(gtk_drop_down_get_selected(GTK_DROP_DOWN(find_class(
+        fixture->controls, "move-direction"))), ==, 0);
+    g_assert_cmpstr(gtk_editable_get_text(GTK_EDITABLE(find_class(
+        fixture->controls, "move-word-entry"))), ==, "");
+    g_assert_true(gtk_widget_has_css_class(
+        square(fixture, 7, 7), "board-cell-selected"));
+    g_assert_nonnull(strstr(
+        gtk_label_get_text(GTK_LABEL(fixture->status)), "opening words"));
+
+    g_test_message("Placing a fresh opening after reset");
+    search(fixture, "RETAINS");
+    row = result_row(fixture->results, "RETAINS");
+    click(find_button(GTK_WIDGET(row), "Place"));
+    assert_word(fixture, "RETAINS", 7, 7, FALSE);
+    g_assert_nonnull(strstr(
+        gtk_label_get_text(GTK_LABEL(fixture->status)), "66 points"));
     click(find_button(fixture->controls, "Undo"));
-    g_assert_false(gtk_widget_has_css_class(
-        square(fixture, 7, 7), "board-tile-filled"));
+    assert_board_empty(fixture);
 }
 
 static void rejects_invalid_positions_and_revalidates_rack(

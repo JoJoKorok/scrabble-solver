@@ -380,6 +380,8 @@ static void start_new_game(ScrabbleMainWindow *main_window) {
     scrabble_board_view_select_position(main_window->board_view, center);
     scrabble_move_controls_set_start_position(
         main_window->move_controls, center);
+    scrabble_move_controls_set_direction(
+        main_window->move_controls, SCRABBLE_MOVE_HORIZONTAL);
     scrabble_move_controls_set_word(main_window->move_controls, "");
     scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
     update_input_state(main_window);
