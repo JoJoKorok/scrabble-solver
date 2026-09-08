@@ -8,11 +8,13 @@ typedef struct {
     GtkWidget *word_entry;
     GtkWidget *direction_dropdown;
     GtkWidget *place_button;
+    GtkWidget *opponent_button;
     GtkWidget *undo_button;
     GtkWidget *new_game_button;
     ScrabbleBoardPosition start_position;
     gboolean has_start_position;
     gboolean place_available;
+    gboolean opponent_available;
     ScrabbleMoveControlsCallback callback;
     gpointer callback_data;
     GDestroyNotify callback_data_destroy;
@@ -27,13 +29,18 @@ static ScrabbleMoveControlsState *controls_state(GtkWidget *move_controls) {
         G_OBJECT(move_controls), "scrabble-move-controls");
 }
 
-static void update_place_button(ScrabbleMoveControlsState *controls) {
+static void update_action_buttons(ScrabbleMoveControlsState *controls) {
     const char *word = gtk_editable_get_text(
         GTK_EDITABLE(controls->word_entry));
 
     gtk_widget_set_sensitive(
         controls->place_button,
         controls->place_available &&
+            controls->has_start_position &&
+            word[0] != '\0');
+    gtk_widget_set_sensitive(
+        controls->opponent_button,
+        controls->opponent_available &&
             controls->has_start_position &&
             word[0] != '\0');
 }
@@ -63,7 +70,7 @@ static void on_word_changed(GtkEditable *editable, gpointer user_data) {
     ScrabbleMoveControlsState *controls = user_data;
 
     (void)editable;
-    update_place_button(controls);
+    update_action_buttons(controls);
 }
 
 static void on_word_activated(GtkEntry *entry, gpointer user_data) {
@@ -78,6 +85,13 @@ static void on_word_activated(GtkEntry *entry, gpointer user_data) {
 static void on_place_clicked(GtkButton *button, gpointer user_data) {
     (void)button;
     emit_action(user_data, SCRABBLE_MOVE_CONTROLS_PLACE);
+}
+
+static void on_record_opponent_clicked(
+    GtkButton *button,
+    gpointer user_data) {
+    (void)button;
+    emit_action(user_data, SCRABBLE_MOVE_CONTROLS_RECORD_OPPONENT);
 }
 
 static void on_undo_clicked(GtkButton *button, gpointer user_data) {
@@ -105,10 +119,10 @@ GtkWidget *scrabble_move_controls_new(void) {
         GTK_ORIENTATION_VERTICAL, 10);
     ScrabbleMoveControlsState *controls = g_new0(
         ScrabbleMoveControlsState, 1);
-    GtkWidget *heading = gtk_label_new("PLACE A WORD");
+    GtkWidget *heading = gtk_label_new("BOARD MOVE");
     GtkWidget *note = gtk_label_new(
-        "The selected square is the first letter. The opening word crosses "
-        "the center star; later words must connect to the board.");
+        "The selected square is the first letter. Use Place word for your "
+        "move or Record opponent move for theirs.");
     GtkWidget *placement_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *history_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 
@@ -117,6 +131,8 @@ GtkWidget *scrabble_move_controls_new(void) {
     controls->word_entry = gtk_entry_new();
     controls->direction_dropdown = gtk_drop_down_new_from_strings(directions);
     controls->place_button = gtk_button_new_with_label("Place word");
+    controls->opponent_button = gtk_button_new_with_label(
+        "Record opponent move");
     controls->undo_button = gtk_button_new_with_label("Undo");
     controls->new_game_button = gtk_button_new_with_label("New game");
 
@@ -172,6 +188,16 @@ GtkWidget *scrabble_move_controls_new(void) {
     gtk_box_append(GTK_BOX(placement_row), controls->place_button);
     gtk_box_append(GTK_BOX(controls_widget), placement_row);
 
+    gtk_widget_set_sensitive(controls->opponent_button, FALSE);
+    gtk_widget_set_hexpand(controls->opponent_button, TRUE);
+    gtk_widget_add_css_class(controls->opponent_button, "secondary-button");
+    gtk_widget_add_css_class(
+        controls->opponent_button, "opponent-move-button");
+    gtk_widget_set_tooltip_text(
+        controls->opponent_button,
+        "Add an opponent's visible word without using your rack");
+    gtk_box_append(GTK_BOX(controls_widget), controls->opponent_button);
+
     gtk_widget_set_sensitive(controls->undo_button, FALSE);
     gtk_widget_set_sensitive(controls->new_game_button, FALSE);
     gtk_widget_add_css_class(controls->undo_button, "secondary-button");
@@ -196,6 +222,11 @@ GtkWidget *scrabble_move_controls_new(void) {
         controls->place_button,
         "clicked",
         G_CALLBACK(on_place_clicked),
+        controls);
+    g_signal_connect(
+        controls->opponent_button,
+        "clicked",
+        G_CALLBACK(on_record_opponent_clicked),
         controls);
     g_signal_connect(
         controls->undo_button,
@@ -227,7 +258,7 @@ void scrabble_move_controls_set_start_position(
         (char)('A' + position.column),
         position.row + 1);
     gtk_label_set_text(GTK_LABEL(controls->position_label), label);
-    update_place_button(controls);
+    update_action_buttons(controls);
 }
 
 void scrabble_move_controls_set_direction(
@@ -251,7 +282,17 @@ void scrabble_move_controls_set_place_available(
 
     g_return_if_fail(controls != NULL);
     controls->place_available = available;
-    update_place_button(controls);
+    update_action_buttons(controls);
+}
+
+void scrabble_move_controls_set_opponent_available(
+    GtkWidget *move_controls,
+    gboolean available) {
+    ScrabbleMoveControlsState *controls = controls_state(move_controls);
+
+    g_return_if_fail(controls != NULL);
+    controls->opponent_available = available;
+    update_action_buttons(controls);
 }
 
 void scrabble_move_controls_set_history_available(

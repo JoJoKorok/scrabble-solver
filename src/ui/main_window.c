@@ -68,18 +68,22 @@ static void update_move_control_availability(
     gboolean rack_is_ready) {
     gboolean has_history = main_window->game != NULL &&
         scrabble_game_move_count(main_window->game) > 0;
+    gboolean game_is_ready = main_window->dictionary != NULL &&
+        main_window->game != NULL;
 
     if (main_window->move_controls == NULL) {
         return;
     }
     scrabble_move_controls_set_place_available(
         main_window->move_controls,
-        rack_is_ready && main_window->game != NULL);
+        rack_is_ready && game_is_ready);
+    scrabble_move_controls_set_opponent_available(
+        main_window->move_controls, game_is_ready);
     scrabble_move_controls_set_history_available(
         main_window->move_controls, has_history);
     scrabble_result_list_set_placement_available(
         GTK_LIST_BOX(main_window->result_list),
-        rack_is_ready && main_window->game != NULL);
+        rack_is_ready && game_is_ready);
 }
 
 static void update_input_state(ScrabbleMainWindow *main_window) {
@@ -99,7 +103,8 @@ static void update_input_state(ScrabbleMainWindow *main_window) {
     } else if (!valid) {
         set_status(
             main_window,
-            "Enter one to seven letters or blank tiles.",
+            "Enter one to seven letters or blank tiles, or record an "
+            "opponent move below.",
             "status-muted");
     } else {
         set_status(
@@ -328,6 +333,78 @@ static void place_requested_word(
     apply_move(main_window, &move);
 }
 
+static void record_opponent_move(
+    ScrabbleMainWindow *main_window,
+    const ScrabbleMove *move) {
+    ScrabbleMove applied_move;
+    ScrabblePlacementStatus placement_status;
+    ScrabbleGameStatus game_status;
+    const ScrabbleGameTurn *turn;
+    ScrabbleRack rack;
+    gboolean rack_is_ready;
+    char message[128];
+
+    if (main_window->game == NULL || main_window->dictionary == NULL) {
+        update_input_state(main_window);
+        return;
+    }
+
+    game_status = scrabble_game_record_opponent_move(
+        main_window->game,
+        main_window->dictionary,
+        move,
+        &applied_move,
+        &placement_status);
+    if (game_status == SCRABBLE_GAME_PLACEMENT_REJECTED) {
+        set_status(
+            main_window,
+            placement_error_message(placement_status),
+            "status-error");
+        return;
+    }
+    if (game_status != SCRABBLE_GAME_OK) {
+        set_status(
+            main_window,
+            game_status == SCRABBLE_GAME_OUT_OF_MEMORY
+                ? "There is not enough memory to record the move."
+                : "The game could not update the board safely.",
+            "status-error");
+        return;
+    }
+
+    refresh_board(main_window);
+    scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
+    rack_is_ready = read_rack(main_window, &rack);
+    update_move_control_availability(main_window, rack_is_ready);
+    scrabble_move_controls_set_word(
+        main_window->move_controls, applied_move.word);
+    turn = scrabble_game_turn_at(
+        main_window->game,
+        scrabble_game_move_count(main_window->game) - 1);
+    g_snprintf(
+        message,
+        sizeof(message),
+        "Opponent played %s for %d points. Your rack is unchanged.",
+        applied_move.word,
+        turn == NULL ? 0 : turn->score.total_score);
+    set_status(main_window, message, "status-success");
+}
+
+static void record_requested_opponent_word(
+    ScrabbleMainWindow *main_window,
+    const ScrabbleMoveControlsRequest *request) {
+    ScrabbleMove move;
+    ScrabbleMoveStatus status = scrabble_move_init(
+        &move, request->word, request->start, request->direction);
+
+    if (status != SCRABBLE_MOVE_OK) {
+        set_status(main_window, move_error_message(status), "status-error");
+        return;
+    }
+
+    record_opponent_move(main_window, &move);
+}
+
 static void undo_last_word(ScrabbleMainWindow *main_window) {
     ScrabbleMove undone_move;
     ScrabbleRack rack;
@@ -431,6 +508,9 @@ static void on_move_controls_action(
     switch (request->action) {
         case SCRABBLE_MOVE_CONTROLS_PLACE:
             place_requested_word(main_window, request);
+            break;
+        case SCRABBLE_MOVE_CONTROLS_RECORD_OPPONENT:
+            record_requested_opponent_word(main_window, request);
             break;
         case SCRABBLE_MOVE_CONTROLS_UNDO:
             undo_last_word(main_window);
@@ -753,7 +833,7 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     GtkWidget *board_card = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
     GtkWidget *board_heading = gtk_label_new("GAME BOARD");
     GtkWidget *board_note = gtk_label_new(
-        "Select the first letter's square, then use the opening-move "
+        "Select the first letter's square, then use the board-move "
         "controls.");
     GtkWidget *board_scroll = gtk_scrolled_window_new();
     GtkWidget *sidebar = gtk_box_new(
@@ -764,8 +844,8 @@ static GtkWidget *create_content(ScrabbleMainWindow *main_window) {
     GtkWidget *controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *results_heading = gtk_label_new("WORD SUGGESTIONS");
     GtkWidget *results_note = gtk_label_new(
-        "Place uses the selected square and direction. Listed scores are "
-        "rack points; board bonuses are added when placed.");
+        "Opening suggestions show rack points; later suggestions include "
+        "board bonuses and cross-words.");
     GtkWidget *results_scroll = gtk_scrolled_window_new();
     main_window->rack_entry = gtk_entry_new();
     main_window->solve_button = gtk_button_new_with_label("Find words");

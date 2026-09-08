@@ -336,6 +336,33 @@ static void rejects_invalid_positions_and_revalidates_rack(
     g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
 }
 
+static void records_an_opponent_move_without_using_the_user_rack(
+    WindowFixture *fixture,
+    gconstpointer data) {
+    GtkWidget *word_entry = find_class(
+        fixture->controls, "move-word-entry");
+    GtkWidget *opponent_button = find_button(
+        fixture->controls, "Record opponent move");
+    (void)data;
+
+    gtk_editable_set_text(GTK_EDITABLE(word_entry), "RETAINS");
+    click(square(fixture, 7, 4));
+    g_assert_true(gtk_widget_get_sensitive(opponent_button));
+    gtk_editable_set_text(GTK_EDITABLE(fixture->rack), "EEOOYNR");
+    click(opponent_button);
+
+    assert_word(fixture, "RETAINS", 7, 4, FALSE);
+    g_assert_cmpstr(
+        gtk_editable_get_text(GTK_EDITABLE(fixture->rack)), ==, "EEOOYNR");
+    g_assert_nonnull(strstr(
+        gtk_label_get_text(GTK_LABEL(fixture->status)),
+        "Opponent played RETAINS for 64 points"));
+    g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
+
+    click(find_button(fixture->controls, "Undo"));
+    assert_board_empty(fixture);
+}
+
 static void clears_during_callback(
     GtkListBox *list, const ScrabbleResult *result, gpointer data) {
     int *calls = data;
@@ -380,6 +407,9 @@ int main(int argc, char **argv) {
         setup_window, places_opening_and_connected_suggestions, teardown_window);
     g_test_add("/suggestions/validation-and-invalidation", WindowFixture, NULL,
         setup_window, rejects_invalid_positions_and_revalidates_rack, teardown_window);
+    g_test_add("/suggestions/opponent-recording", WindowFixture, NULL,
+        setup_window, records_an_opponent_move_without_using_the_user_rack,
+        teardown_window);
     g_test_add_func("/suggestions/result-lifetime", results_own_data_and_guard_activation);
     return g_test_run();
 }

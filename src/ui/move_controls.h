@@ -7,6 +7,7 @@
 
 typedef enum {
     SCRABBLE_MOVE_CONTROLS_PLACE = 0,
+    SCRABBLE_MOVE_CONTROLS_RECORD_OPPONENT,
     SCRABBLE_MOVE_CONTROLS_UNDO,
     SCRABBLE_MOVE_CONTROLS_NEW_GAME
 } ScrabbleMoveControlsAction;
@@ -33,6 +34,9 @@ void scrabble_move_controls_set_direction(
     GtkWidget *move_controls,
     ScrabbleMoveDirection direction);
 void scrabble_move_controls_set_place_available(
+    GtkWidget *move_controls,
+    gboolean available);
+void scrabble_move_controls_set_opponent_available(
     GtkWidget *move_controls,
     gboolean available);
 void scrabble_move_controls_set_history_available(

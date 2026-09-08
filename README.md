@@ -49,6 +49,11 @@ Use **Undo** to remove the last placed word without disturbing earlier turns,
 or **New game** to clear the board. The rack is entered manually and is not
 reduced or refilled automatically.
 
+To keep the board synchronized after the other player acts, select the first
+letter's square, choose the direction, enter their complete word, and click
+**Record opponent move**. The app validates the visible play without using or
+changing **Your Rack**.
+
 ## Dictionary
 
 The default dictionary at `assets/dictionaries/enable2k.txt` is derived from
