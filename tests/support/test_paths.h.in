@@ -5,6 +5,8 @@
     "@CMAKE_CURRENT_BINARY_DIR@/fixtures/dictionary.txt"
 #define SCRABBLE_SOLVER_DICTIONARY_FIXTURE \
     "@CMAKE_CURRENT_BINARY_DIR@/fixtures/solver_dictionary.txt"
+#define SCRABBLE_OPPONENT_DICTIONARY_FIXTURE \
+    "@CMAKE_CURRENT_BINARY_DIR@/fixtures/opponent_dictionary.txt"
 #define SCRABBLE_BUNDLED_DICTIONARY_FIXTURE \
     "@CMAKE_SOURCE_DIR@/assets/dictionaries/enable2k.txt"
 

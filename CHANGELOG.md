@@ -21,7 +21,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   rack-versus-board tile tracking, and blank-tile identity.
 - Atomic opening-move validation and application covering the center square,
   dictionary membership, rack letters, and blank assignment.
-- An owned game state that records applied moves and supports safe undo and
+- An owned game state that distinguishes user and opponent turns, records
+  visible opponent moves without their hidden rack, and supports safe undo and
   new-game reset while keeping the board synchronized.
 - The standard premium-square layout and opening-move score breakdowns for
   letter premiums, word multipliers, blanks, and seven-tile bingo bonuses.

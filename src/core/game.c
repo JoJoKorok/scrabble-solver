@@ -46,6 +46,32 @@ static int reserve_turn(ScrabbleGame *game) {
     return 1;
 }
 
+static int infer_visible_tile_rack(
+    const ScrabbleMove *move,
+    ScrabbleRack *rack) {
+    char tiles[SCRABBLE_RACK_CAPACITY + 1] = {0};
+    size_t tile_count = 0;
+
+    for (size_t index = 0; index < move->length; ++index) {
+        ScrabbleMoveTile tile;
+
+        if (scrabble_move_tile_at(move, index, &tile) != SCRABBLE_MOVE_OK) {
+            return 0;
+        }
+        if (!tile.from_rack) {
+            continue;
+        }
+        if (tile_count >= SCRABBLE_RACK_CAPACITY) {
+            return 0;
+        }
+        tiles[tile_count] = tile.is_blank ? '?' : tile.letter;
+        ++tile_count;
+    }
+
+    return tile_count > 0 &&
+        scrabble_rack_init(rack, tiles) == SCRABBLE_RACK_OK;
+}
+
 static int last_move_matches_board(const ScrabbleGame *game) {
     const ScrabbleMove *move = &game->turns[game->move_count - 1].move;
 
@@ -198,6 +224,7 @@ ScrabbleGameStatus scrabble_game_apply_opening_move(
 
     game->turns[game->move_count].move = applied;
     game->turns[game->move_count].score = score;
+    game->turns[game->move_count].owner = SCRABBLE_TURN_OWNER_USER;
     ++game->move_count;
     if (applied_move != NULL) {
         *applied_move = applied;
@@ -257,6 +284,92 @@ ScrabbleGameStatus scrabble_game_apply_move(
 
     game->turns[game->move_count].move = applied;
     game->turns[game->move_count].score = score;
+    game->turns[game->move_count].owner = SCRABBLE_TURN_OWNER_USER;
+    ++game->move_count;
+    if (applied_move != NULL) {
+        *applied_move = applied;
+    }
+    return SCRABBLE_GAME_OK;
+}
+
+ScrabbleGameStatus scrabble_game_record_opponent_move(
+    ScrabbleGame *game,
+    const ScrabbleDictionary *dictionary,
+    const ScrabbleMove *move,
+    ScrabbleMove *applied_move,
+    ScrabblePlacementStatus *placement_status) {
+    ScrabbleMove proposal;
+    ScrabbleMove validated;
+    ScrabbleMove applied;
+    ScrabbleMoveScore score;
+    ScrabbleRack visible_tiles;
+    ScrabblePlacementStatus status;
+    int is_opening;
+
+    if (move != NULL) {
+        proposal = *move;
+    }
+    if (applied_move != NULL) {
+        memset(applied_move, 0, sizeof(*applied_move));
+    }
+    set_placement_status(placement_status, SCRABBLE_PLACEMENT_OK);
+
+    if (game == NULL || dictionary == NULL || move == NULL) {
+        set_placement_status(
+            placement_status, SCRABBLE_PLACEMENT_INVALID_ARGUMENT);
+        return SCRABBLE_GAME_INVALID_ARGUMENT;
+    }
+
+    is_opening = game->move_count == 0;
+    status = is_opening
+        ? scrabble_opening_move_validate_board(
+              game->board, dictionary, &proposal, &validated)
+        : scrabble_connected_move_validate_board(
+              game->board, dictionary, &proposal, &validated);
+    if (status != SCRABBLE_PLACEMENT_OK) {
+        set_placement_status(placement_status, status);
+        return SCRABBLE_GAME_PLACEMENT_REJECTED;
+    }
+    if (!infer_visible_tile_rack(&validated, &visible_tiles)) {
+        set_placement_status(
+            placement_status, SCRABBLE_PLACEMENT_INVALID_MOVE);
+        return SCRABBLE_GAME_PLACEMENT_REJECTED;
+    }
+
+    if ((is_opening &&
+         scrabble_score_opening_move(&validated, &score) !=
+             SCRABBLE_SCORING_OK) ||
+        (!is_opening &&
+         scrabble_score_move(game->board, &validated, &score) !=
+             SCRABBLE_SCORING_OK)) {
+        return SCRABBLE_GAME_BOARD_STATE_ERROR;
+    }
+
+    if (!reserve_turn(game)) {
+        return SCRABBLE_GAME_OUT_OF_MEMORY;
+    }
+
+    status = is_opening
+        ? scrabble_opening_move_apply(
+              game->board,
+              dictionary,
+              &visible_tiles,
+              &validated,
+              &applied)
+        : scrabble_connected_move_apply(
+              game->board,
+              dictionary,
+              &visible_tiles,
+              &validated,
+              &applied);
+    if (status != SCRABBLE_PLACEMENT_OK) {
+        set_placement_status(placement_status, status);
+        return SCRABBLE_GAME_BOARD_STATE_ERROR;
+    }
+
+    game->turns[game->move_count].move = applied;
+    game->turns[game->move_count].score = score;
+    game->turns[game->move_count].owner = SCRABBLE_TURN_OWNER_OPPONENT;
     ++game->move_count;
     if (applied_move != NULL) {
         *applied_move = applied;

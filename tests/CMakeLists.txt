@@ -20,6 +20,11 @@ configure_file(
   COPYONLY
 )
 configure_file(
+  fixtures/opponent_dictionary.txt
+  ${CMAKE_CURRENT_BINARY_DIR}/fixtures/opponent_dictionary.txt
+  COPYONLY
+)
+configure_file(
   support/test_paths.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/generated/test_paths.h
   @ONLY

@@ -12,9 +12,15 @@
 
 typedef struct ScrabbleGame ScrabbleGame;
 
+typedef enum {
+    SCRABBLE_TURN_OWNER_USER = 0,
+    SCRABBLE_TURN_OWNER_OPPONENT
+} ScrabbleTurnOwner;
+
 typedef struct {
     ScrabbleMove move;
     ScrabbleMoveScore score;
+    ScrabbleTurnOwner owner;
 } ScrabbleGameTurn;
 
 typedef enum {
@@ -59,6 +65,16 @@ ScrabbleGameStatus scrabble_game_apply_move(
     ScrabbleGame *game,
     const ScrabbleDictionary *dictionary,
     const ScrabbleRack *rack,
+    const ScrabbleMove *move,
+    ScrabbleMove *applied_move,
+    ScrabblePlacementStatus *placement_status);
+
+/* Records an exact visible opponent move without requiring their hidden rack.
+   The first recorded move uses opening rules; later moves use connected rules.
+   Explicit blank markers on newly placed tiles are preserved. */
+ScrabbleGameStatus scrabble_game_record_opponent_move(
+    ScrabbleGame *game,
+    const ScrabbleDictionary *dictionary,
     const ScrabbleMove *move,
     ScrabbleMove *applied_move,
     ScrabblePlacementStatus *placement_status);

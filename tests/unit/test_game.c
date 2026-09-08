@@ -19,6 +19,14 @@ static ScrabbleDictionary *load_dictionary(void) {
     return status == SCRABBLE_DICTIONARY_OK ? dictionary : NULL;
 }
 
+static ScrabbleDictionary *load_opponent_dictionary(void) {
+    ScrabbleDictionaryStatus status;
+    ScrabbleDictionary *dictionary = scrabble_dictionary_load(
+        SCRABBLE_OPPONENT_DICTIONARY_FIXTURE, &status);
+
+    return status == SCRABBLE_DICTIONARY_OK ? dictionary : NULL;
+}
+
 static int creates_and_resets_game_state(void) {
     ScrabbleGame *game = scrabble_game_create();
 
@@ -81,6 +89,7 @@ static int records_and_undoes_an_opening_move(void) {
     TEST_ASSERT(turn != NULL);
     TEST_ASSERT_STRING("RETAINS", turn->move.word);
     TEST_ASSERT_INT(62, turn->score.total_score);
+    TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_USER, turn->owner);
     TEST_ASSERT(scrabble_game_turn_at(game, 1) == NULL);
 
     TEST_ASSERT_INT(
@@ -187,6 +196,7 @@ static int records_scores_and_undoes_connected_moves(void) {
     TEST_ASSERT_STRING("RAIN", turn->move.word);
     TEST_ASSERT_INT(4, turn->score.total_score);
     TEST_ASSERT_INT(0, turn->score.cross_word_score);
+    TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_USER, turn->owner);
 
     TEST_ASSERT_INT(
         SCRABBLE_GAME_OK,
@@ -218,6 +228,76 @@ static int records_scores_and_undoes_connected_moves(void) {
     TEST_ASSERT_INT(1, scrabble_game_move_count(game));
     TEST_ASSERT_INT(
         7, scrabble_board_tile_count(scrabble_game_board(game)));
+
+    scrabble_game_destroy(game);
+    scrabble_dictionary_destroy(dictionary);
+    return 0;
+}
+
+static int records_opponent_moves_without_their_hidden_rack(void) {
+    ScrabbleDictionary *dictionary = load_opponent_dictionary();
+    ScrabbleGame *game = scrabble_game_create();
+    ScrabbleMove move;
+    ScrabbleMove applied;
+    ScrabbleMove undone;
+    ScrabblePlacementStatus placement_status;
+    const ScrabbleGameTurn *turn;
+    ScrabbleBoardCell cell;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT(game != NULL);
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "VISE", position(7, 7), SCRABBLE_MOVE_VERTICAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_GAME_OK,
+        scrabble_game_record_opponent_move(
+            game,
+            dictionary,
+            &move,
+            &applied,
+            &placement_status));
+    TEST_ASSERT_INT(SCRABBLE_PLACEMENT_OK, placement_status);
+    TEST_ASSERT_STRING("VISE", applied.word);
+    TEST_ASSERT_INT(1, scrabble_game_move_count(game));
+    TEST_ASSERT_INT(4,
+                    scrabble_board_tile_count(scrabble_game_board(game)));
+    turn = scrabble_game_turn_at(game, 0);
+    TEST_ASSERT(turn != NULL);
+    TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_OPPONENT, turn->owner);
+    TEST_ASSERT_INT(14, turn->score.total_score);
+
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move, "RAIN", position(8, 5), SCRABBLE_MOVE_HORIZONTAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_GAME_OK,
+        scrabble_game_record_opponent_move(
+            game, dictionary, &move, NULL, &placement_status));
+    TEST_ASSERT_INT(SCRABBLE_PLACEMENT_OK, placement_status);
+    TEST_ASSERT_INT(2, scrabble_game_move_count(game));
+    TEST_ASSERT_INT(7,
+                    scrabble_board_tile_count(scrabble_game_board(game)));
+    turn = scrabble_game_turn_at(game, 1);
+    TEST_ASSERT(turn != NULL);
+    TEST_ASSERT_STRING("RAIN", turn->move.word);
+    TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_OPPONENT, turn->owner);
+    TEST_ASSERT_INT(6, turn->score.total_score);
+
+    TEST_ASSERT_INT(
+        SCRABBLE_GAME_OK,
+        scrabble_game_undo_last_move(game, &undone));
+    TEST_ASSERT_STRING("RAIN", undone.word);
+    TEST_ASSERT_INT(1, scrabble_game_move_count(game));
+    TEST_ASSERT_INT(4,
+                    scrabble_board_tile_count(scrabble_game_board(game)));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_cell(
+            scrabble_game_board(game), position(8, 7), &cell));
+    TEST_ASSERT_INT('I', cell.letter);
 
     scrabble_game_destroy(game);
     scrabble_dictionary_destroy(dictionary);
@@ -270,6 +350,12 @@ static int rejected_moves_do_not_change_history(void) {
     TEST_ASSERT_INT(
         SCRABBLE_GAME_INVALID_ARGUMENT,
         scrabble_game_undo_last_move(NULL, NULL));
+    TEST_ASSERT_INT(
+        SCRABBLE_GAME_INVALID_ARGUMENT,
+        scrabble_game_record_opponent_move(
+            NULL, dictionary, &move, NULL, &placement_status));
+    TEST_ASSERT_INT(
+        SCRABBLE_PLACEMENT_INVALID_ARGUMENT, placement_status);
 
     scrabble_game_destroy(game);
     scrabble_dictionary_destroy(dictionary);
@@ -284,6 +370,8 @@ static const ScrabbleTestCase TESTS[] = {
      resets_a_recorded_game_for_reuse},
     {"records, scores, and undoes connected moves",
      records_scores_and_undoes_connected_moves},
+    {"records opponent moves without their hidden rack",
+     records_opponent_moves_without_their_hidden_rack},
     {"rejected moves do not change history",
      rejected_moves_do_not_change_history}
 };

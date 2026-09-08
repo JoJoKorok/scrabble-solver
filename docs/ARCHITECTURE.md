@@ -57,6 +57,9 @@ global state:
   `scrabble_board_destroy()`.
 - `scrabble_game_create()` returns an owned game containing its board and move
   history. Release it with `scrabble_game_destroy()`.
+- Game turns store whether a move belongs to the user or opponent. Opponent
+  recording derives a temporary tile supply from the move's visible new tiles;
+  it never reads or changes the user's rack.
 - `scrabble_solve()` fills an owned result set. Release it with
   `scrabble_result_set_destroy()`.
 - `scrabble_resource_find()` and `scrabble_resource_find_bundled()` return
