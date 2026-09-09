@@ -239,6 +239,12 @@ ownership rules, and guidance for extending the project.
 Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md), which documents
 the required checks, architectural boundaries, and release process.
 
+## License
+
+Scrabble Solver's source code is available under the [MIT License](LICENSE).
+Third-party libraries and bundled data retain their own licensing and
+attribution terms.
+
 ## Development checks
 
 Before committing a change, run:
