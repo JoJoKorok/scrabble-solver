@@ -50,6 +50,17 @@ static const ScrabbleResult *find_placement(
     return NULL;
 }
 
+static int racks_equal(
+    const ScrabbleRack *left,
+    const ScrabbleRack *right) {
+    return left->blank_count == right->blank_count &&
+        left->tile_count == right->tile_count &&
+        memcmp(
+            left->letter_counts,
+            right->letter_counts,
+            sizeof(left->letter_counts)) == 0;
+}
+
 static int apply_board_suggestion(
     ScrabbleGame *game,
     const ScrabbleDictionary *dictionary,
@@ -87,8 +98,108 @@ static int apply_board_suggestion(
     turn = scrabble_game_turn_at(game, turn_index);
     TEST_ASSERT(turn != NULL);
     TEST_ASSERT_STRING(word, turn->move.word);
+    TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_USER, turn->owner);
     TEST_ASSERT_INT(suggested_score, turn->score.total_score);
     scrabble_result_set_destroy(&results);
+    return 0;
+}
+
+static int completes_an_alternating_two_player_workflow(void) {
+    ScrabbleDictionary *dictionary = load_dictionary();
+    ScrabbleGame *game = scrabble_game_create();
+    ScrabbleRack rack;
+    ScrabbleRack rack_before_opponent_move;
+    ScrabbleMove move;
+    ScrabbleMove undone;
+    ScrabbleBoardCell cell;
+    const ScrabbleGameTurn *turn;
+
+    TEST_ASSERT(dictionary != NULL);
+    TEST_ASSERT(game != NULL);
+    TEST_ASSERT_INT(SCRABBLE_RACK_OK, scrabble_rack_init(&rack, "RIN"));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move,
+            "RETAINS",
+            position(7, 4),
+            SCRABBLE_MOVE_HORIZONTAL));
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_set_tile_blank(&move, 3, 1));
+    rack_before_opponent_move = rack;
+    TEST_ASSERT_INT(
+        SCRABBLE_GAME_OK,
+        scrabble_game_record_opponent_move(
+            game, dictionary, &move, NULL, NULL));
+    TEST_ASSERT(racks_equal(&rack, &rack_before_opponent_move));
+    turn = scrabble_game_turn_at(game, 0);
+    TEST_ASSERT(turn != NULL);
+    TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_OPPONENT, turn->owner);
+    TEST_ASSERT_INT(62, turn->score.total_score);
+
+    TEST_ASSERT_INT(
+        0,
+        apply_board_suggestion(
+            game,
+            dictionary,
+            "RIN",
+            "RAIN",
+            position(6, 7),
+            SCRABBLE_MOVE_VERTICAL));
+
+    TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK,
+        scrabble_move_init(
+            &move,
+            "STAIN",
+            position(7, 10),
+            SCRABBLE_MOVE_VERTICAL));
+    rack_before_opponent_move = rack;
+    TEST_ASSERT_INT(
+        SCRABBLE_GAME_OK,
+        scrabble_game_record_opponent_move(
+            game, dictionary, &move, NULL, NULL));
+    TEST_ASSERT(racks_equal(&rack, &rack_before_opponent_move));
+    turn = scrabble_game_turn_at(game, 2);
+    TEST_ASSERT(turn != NULL);
+    TEST_ASSERT_STRING("STAIN", turn->move.word);
+    TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_OPPONENT, turn->owner);
+
+    TEST_ASSERT_INT(
+        0,
+        apply_board_suggestion(
+            game,
+            dictionary,
+            "TRAI",
+            "TRAIN",
+            position(11, 6),
+            SCRABBLE_MOVE_HORIZONTAL));
+    TEST_ASSERT_INT(4, scrabble_game_move_count(game));
+    TEST_ASSERT_INT(18,
+                    scrabble_board_tile_count(scrabble_game_board(game)));
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_cell(
+            scrabble_game_board(game), position(7, 7), &cell));
+    TEST_ASSERT_INT('A', cell.letter);
+    TEST_ASSERT_INT(1, cell.is_blank);
+
+    TEST_ASSERT_INT(
+        SCRABBLE_GAME_OK, scrabble_game_undo_last_move(game, &undone));
+    TEST_ASSERT_STRING("TRAIN", undone.word);
+    TEST_ASSERT_INT(14,
+                    scrabble_board_tile_count(scrabble_game_board(game)));
+    turn = scrabble_game_turn_at(game, 2);
+    TEST_ASSERT(turn != NULL);
+    TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_OPPONENT, turn->owner);
+
+    scrabble_game_reset(game);
+    TEST_ASSERT(scrabble_board_is_empty(scrabble_game_board(game)));
+    TEST_ASSERT_INT(0, scrabble_game_move_count(game));
+
+    scrabble_game_destroy(game);
+    scrabble_dictionary_destroy(dictionary);
     return 0;
 }
 
@@ -211,7 +322,9 @@ static int completes_a_multi_turn_solver_workflow(void) {
 
 static const ScrabbleTestCase TESTS[] = {
     {"completes a multi-turn solver workflow",
-     completes_a_multi_turn_solver_workflow}
+     completes_a_multi_turn_solver_workflow},
+    {"completes an alternating two-player workflow",
+     completes_an_alternating_two_player_workflow}
 };
 
 TEST_MAIN(TESTS)

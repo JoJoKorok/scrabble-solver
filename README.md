@@ -56,6 +56,23 @@ changing **Your Rack**. If the opponent placed a blank tile, enter its board
 square under **Opponent blank squares** before recording the move. Separate two
 blank squares with a space, such as `H9 J12`.
 
+## Track a complete two-player game
+
+Repeat this cycle after the opening word:
+
+1. When the opponent plays, select their word's first square, enter the entire
+   connected word and direction, mark any new blank squares, and click
+   **Record opponent move**.
+2. Replace **Your Rack** with the tiles currently on your rack and click
+   **Find words**.
+3. Choose and place one of the legal board suggestions. Then update the rack
+   again after drawing replacement tiles.
+4. Record the opponent's next visible move and continue the cycle.
+
+Both players' moves share the same board and undo history. **Undo** removes the
+most recently recorded move regardless of who played it, while **New game**
+clears the complete board. The solver never needs to know the opponent's rack.
+
 ## Dictionary
 
 The default dictionary at `assets/dictionaries/enable2k.txt` is derived from

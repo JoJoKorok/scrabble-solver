@@ -336,17 +336,21 @@ static void rejects_invalid_positions_and_revalidates_rack(
     g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
 }
 
-static void records_an_opponent_move_without_using_the_user_rack(
+static void completes_an_alternating_two_player_workflow(
     WindowFixture *fixture,
     gconstpointer data) {
     GtkWidget *word_entry = find_class(
         fixture->controls, "move-word-entry");
+    GtkWidget *direction = find_class(
+        fixture->controls, "move-direction");
     GtkWidget *opponent_button = find_button(
         fixture->controls, "Record opponent move");
     GtkWidget *blank_entry = find_class(
         fixture->controls, "opponent-blank-entry");
+    GtkListBoxRow *row;
     (void)data;
 
+    g_test_message("Recording an opponent opening without using the user's rack");
     gtk_editable_set_text(GTK_EDITABLE(word_entry), "RETAINS");
     click(square(fixture, 7, 4));
     g_assert_true(gtk_widget_get_sensitive(opponent_button));
@@ -375,7 +379,55 @@ static void records_an_opponent_move_without_using_the_user_rack(
         gtk_editable_get_text(GTK_EDITABLE(blank_entry)), ==, "");
     g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
 
+    g_test_message("Finding and placing the user's connected reply");
+    search(fixture, "RIN");
+    row = result_row_at(fixture->results, "RAIN", "H7 down");
+    click(find_button(GTK_WIDGET(row), "Place"));
+    assert_word(fixture, "RAIN", 6, 7, TRUE);
+    g_assert_cmpstr(
+        gtk_editable_get_text(GTK_EDITABLE(fixture->rack)), ==, "RIN");
+    g_assert_nonnull(strstr(
+        gtk_label_get_text(GTK_LABEL(fixture->status)), "3 points"));
+
+    g_test_message("Recording the opponent's connected reply");
+    gtk_editable_set_text(GTK_EDITABLE(word_entry), "STAIN");
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(direction), 1);
+    click(square(fixture, 7, 10));
+    click(opponent_button);
+    assert_word(fixture, "STAIN", 7, 10, TRUE);
+    g_assert_cmpstr(
+        gtk_editable_get_text(GTK_EDITABLE(fixture->rack)), ==, "RIN");
+    g_assert_nonnull(strstr(
+        gtk_label_get_text(GTK_LABEL(fixture->status)),
+        "Opponent played STAIN"));
+
+    g_test_message("Finding and placing the user's next connected reply");
+    search(fixture, "TRAI");
+    row = result_row_at(fixture->results, "TRAIN", "G12 across");
+    click(find_button(GTK_WIDGET(row), "Place"));
+    assert_word(fixture, "TRAIN", 11, 6, FALSE);
+    assert_word(fixture, "RETAINS", 7, 4, FALSE);
+    assert_word(fixture, "RAIN", 6, 7, TRUE);
+    assert_word(fixture, "STAIN", 7, 10, TRUE);
+    g_assert_true(gtk_widget_has_css_class(
+        square(fixture, 7, 7), "board-blank-tile"));
+    g_assert_cmpstr(
+        gtk_editable_get_text(GTK_EDITABLE(fixture->rack)), ==, "TRAI");
+
+    g_test_message("Undoing both owners' latest turns in order");
     click(find_button(fixture->controls, "Undo"));
+    g_assert_false(gtk_widget_has_css_class(
+        square(fixture, 11, 6), "board-tile-filled"));
+    g_assert_true(gtk_widget_has_css_class(
+        square(fixture, 11, 10), "board-tile-filled"));
+    assert_word(fixture, "STAIN", 7, 10, TRUE);
+    click(find_button(fixture->controls, "Undo"));
+    g_assert_false(gtk_widget_has_css_class(
+        square(fixture, 8, 10), "board-tile-filled"));
+    assert_word(fixture, "RETAINS", 7, 4, FALSE);
+    assert_word(fixture, "RAIN", 6, 7, TRUE);
+
+    click(find_button(fixture->controls, "New game"));
     assert_board_empty(fixture);
 }
 
@@ -423,8 +475,8 @@ int main(int argc, char **argv) {
         setup_window, places_opening_and_connected_suggestions, teardown_window);
     g_test_add("/suggestions/validation-and-invalidation", WindowFixture, NULL,
         setup_window, rejects_invalid_positions_and_revalidates_rack, teardown_window);
-    g_test_add("/suggestions/opponent-recording", WindowFixture, NULL,
-        setup_window, records_an_opponent_move_without_using_the_user_rack,
+    g_test_add("/suggestions/alternating-two-player-workflow", WindowFixture, NULL,
+        setup_window, completes_an_alternating_two_player_workflow,
         teardown_window);
     g_test_add_func("/suggestions/result-lifetime", results_own_data_and_guard_activation);
     return g_test_run();

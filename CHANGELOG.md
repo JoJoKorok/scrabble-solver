@@ -45,6 +45,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   performance coverage.
 - End-to-end multi-turn gameplay coverage for suggested moves, board-edge
   placement, no-move racks, repeated undo, reset, and starting a fresh game.
+- Exact alternating two-player workflow coverage across opponent entry, user
+  suggestions, blank preservation, rack isolation, undo, and reset.
 
 ### Planned
 

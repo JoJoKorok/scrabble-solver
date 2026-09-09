@@ -135,6 +135,12 @@ direction, and blank mask, and apply that exact move through the same scoring
 and history path as manual entry. Rack, dictionary, and board changes discard
 displayed results so stale placements cannot be applied accidentally.
 
+The portable gameplay integration test records alternating user and opponent
+turn ownership directly against the core. The GTK workflow test mirrors the
+same four-turn sequence through visible controls, including an opponent blank,
+rack isolation, connected suggestions, cross-owner undo, and reset. Together
+they guard the engine/UI boundary without exposing game internals to GTK.
+
 For a local visual check, set `SCRABBLE_TEST_SCREENSHOT` to an absolute PNG
 path before running the suggestion-placement test. GTK renders the tested
 window after placement; normal test runs do not produce image files.
