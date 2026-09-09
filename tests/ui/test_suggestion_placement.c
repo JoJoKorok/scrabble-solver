@@ -18,6 +18,8 @@ typedef struct {
     GtkListBox *results;
 } WindowFixture;
 
+static GtkApplication *test_application;
+
 static GtkWidget *find_class(GtkWidget *root, const char *css_class) {
     if (gtk_widget_has_css_class(root, css_class)) {
         return root;
@@ -109,12 +111,7 @@ static void setup_window(WindowFixture *fixture, gconstpointer data) {
     g_assert_no_error(error);
     g_free(settings_path);
 
-    g_test_message("Registering test application");
-    fixture->application = gtk_application_new(
-        "com.jojokorok.scrabblesolver.tests", G_APPLICATION_NON_UNIQUE);
-    g_assert_true(g_application_register(
-        G_APPLICATION(fixture->application), NULL, &error));
-    g_assert_no_error(error);
+    fixture->application = test_application;
     {
         char *stylesheet = scrabble_resource_find_bundled(
             NULL, "styles/application.css", &error);
@@ -145,7 +142,6 @@ static void setup_window(WindowFixture *fixture, gconstpointer data) {
 static void teardown_window(WindowFixture *fixture, gconstpointer data) {
     (void)data;
     gtk_window_destroy(GTK_WINDOW(fixture->window));
-    g_object_unref(fixture->application);
 }
 
 static void search(WindowFixture *fixture, const char *rack) {
@@ -466,10 +462,24 @@ static void results_own_data_and_guard_activation(void) {
 }
 
 int main(int argc, char **argv) {
+    GError *error = NULL;
+    int result;
+
     g_test_init(&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
     if (!gtk_init_check()) {
         g_print("A display is required for GTK integration tests. Use xvfb-run.\n");
         return 77;
+    }
+    test_application = gtk_application_new(
+        "com.jojokorok.scrabblesolver.tests", G_APPLICATION_NON_UNIQUE);
+    if (!g_application_register(
+            G_APPLICATION(test_application), NULL, &error)) {
+        g_printerr(
+            "Could not register the GTK test application: %s\n",
+            error == NULL ? "unknown error" : error->message);
+        g_clear_error(&error);
+        g_object_unref(test_application);
+        return 1;
     }
     g_test_add("/suggestions/opening-and-connected-placement", WindowFixture, NULL,
         setup_window, places_opening_and_connected_suggestions, teardown_window);
@@ -479,5 +489,7 @@ int main(int argc, char **argv) {
         setup_window, completes_an_alternating_two_player_workflow,
         teardown_window);
     g_test_add_func("/suggestions/result-lifetime", results_own_data_and_guard_activation);
-    return g_test_run();
+    result = g_test_run();
+    g_object_unref(test_application);
+    return result;
 }
