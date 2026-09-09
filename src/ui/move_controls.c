@@ -6,6 +6,7 @@ typedef struct {
     GtkWidget *widget;
     GtkWidget *position_label;
     GtkWidget *word_entry;
+    GtkWidget *opponent_blank_entry;
     GtkWidget *direction_dropdown;
     GtkWidget *place_button;
     GtkWidget *opponent_button;
@@ -57,6 +58,8 @@ static void emit_action(
     request.action = action;
     request.word = gtk_editable_get_text(
         GTK_EDITABLE(controls->word_entry));
+    request.opponent_blank_squares = gtk_editable_get_text(
+        GTK_EDITABLE(controls->opponent_blank_entry));
     request.start = controls->start_position;
     request.direction = gtk_drop_down_get_selected(
         GTK_DROP_DOWN(controls->direction_dropdown)) == 0
@@ -70,6 +73,8 @@ static void on_word_changed(GtkEditable *editable, gpointer user_data) {
     ScrabbleMoveControlsState *controls = user_data;
 
     (void)editable;
+    gtk_editable_set_text(
+        GTK_EDITABLE(controls->opponent_blank_entry), "");
     update_action_buttons(controls);
 }
 
@@ -123,12 +128,15 @@ GtkWidget *scrabble_move_controls_new(void) {
     GtkWidget *note = gtk_label_new(
         "The selected square is the first letter. Use Place word for your "
         "move or Record opponent move for theirs.");
+    GtkWidget *opponent_blank_label = gtk_label_new(
+        "Opponent blank squares (optional)");
     GtkWidget *placement_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *history_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 
     controls->widget = controls_widget;
     controls->position_label = gtk_label_new("Start: select a square");
     controls->word_entry = gtk_entry_new();
+    controls->opponent_blank_entry = gtk_entry_new();
     controls->direction_dropdown = gtk_drop_down_new_from_strings(directions);
     controls->place_button = gtk_button_new_with_label("Place word");
     controls->opponent_button = gtk_button_new_with_label(
@@ -187,6 +195,27 @@ GtkWidget *scrabble_move_controls_new(void) {
     gtk_widget_add_css_class(controls->place_button, "place-word-button");
     gtk_box_append(GTK_BOX(placement_row), controls->place_button);
     gtk_box_append(GTK_BOX(controls_widget), placement_row);
+
+    gtk_widget_set_halign(opponent_blank_label, GTK_ALIGN_START);
+    gtk_widget_add_css_class(opponent_blank_label, "move-note");
+    gtk_box_append(GTK_BOX(controls_widget), opponent_blank_label);
+
+    gtk_entry_set_max_length(GTK_ENTRY(controls->opponent_blank_entry), 16);
+    gtk_entry_set_placeholder_text(
+        GTK_ENTRY(controls->opponent_blank_entry),
+        "Example: H9 or H9 J12");
+    gtk_widget_add_css_class(
+        controls->opponent_blank_entry, "opponent-blank-entry");
+    gtk_accessible_update_property(
+        GTK_ACCESSIBLE(controls->opponent_blank_entry),
+        GTK_ACCESSIBLE_PROPERTY_LABEL,
+        "Opponent blank tile squares",
+        -1);
+    gtk_widget_set_tooltip_text(
+        controls->opponent_blank_entry,
+        "Enter the board square of each blank tile the opponent placed");
+    gtk_box_append(
+        GTK_BOX(controls_widget), controls->opponent_blank_entry);
 
     gtk_widget_set_sensitive(controls->opponent_button, FALSE);
     gtk_widget_set_hexpand(controls->opponent_button, TRUE);
@@ -313,6 +342,15 @@ void scrabble_move_controls_set_word(
     g_return_if_fail(controls != NULL);
     gtk_editable_set_text(
         GTK_EDITABLE(controls->word_entry), word == NULL ? "" : word);
+}
+
+void scrabble_move_controls_clear_opponent_blanks(
+    GtkWidget *move_controls) {
+    ScrabbleMoveControlsState *controls = controls_state(move_controls);
+
+    g_return_if_fail(controls != NULL);
+    gtk_editable_set_text(
+        GTK_EDITABLE(controls->opponent_blank_entry), "");
 }
 
 gboolean scrabble_move_controls_place_word(

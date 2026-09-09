@@ -63,6 +63,99 @@ static int read_rack(ScrabbleMainWindow *main_window, ScrabbleRack *rack) {
         scrabble_rack_init(rack, tiles) == SCRABBLE_RACK_OK;
 }
 
+static void skip_coordinate_separators(const char **cursor) {
+    while (**cursor == ',' || g_ascii_isspace(**cursor)) {
+        ++*cursor;
+    }
+}
+
+static int move_index_at_position(
+    const ScrabbleMove *move,
+    ScrabbleBoardPosition position,
+    size_t *word_index) {
+    for (size_t index = 0; index < move->length; ++index) {
+        ScrabbleMoveTile tile;
+
+        if (scrabble_move_tile_at(move, index, &tile) != SCRABBLE_MOVE_OK) {
+            return 0;
+        }
+        if (tile.position.row == position.row &&
+            tile.position.column == position.column) {
+            *word_index = index;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static const char *mark_opponent_blank_squares(
+    const ScrabbleBoard *board,
+    const char *text,
+    ScrabbleMove *move) {
+    const char *cursor = text;
+    size_t blank_count = 0;
+
+    if (text == NULL || text[0] == '\0') {
+        return NULL;
+    }
+
+    skip_coordinate_separators(&cursor);
+    while (*cursor != '\0') {
+        ScrabbleBoardPosition position;
+        ScrabbleBoardCell cell;
+        ScrabbleMoveTile tile;
+        size_t word_index;
+        size_t row_number = 0;
+        char column = (char)g_ascii_toupper(*cursor);
+
+        if (column < 'A' || column >= 'A' + SCRABBLE_BOARD_SIZE) {
+            return "Enter blank squares as coordinates, such as H9.";
+        }
+        position.column = (size_t)(column - 'A');
+        ++cursor;
+        if (!g_ascii_isdigit(*cursor)) {
+            return "Enter blank squares as coordinates, such as H9.";
+        }
+        while (g_ascii_isdigit(*cursor)) {
+            row_number = row_number * 10 + (size_t)(*cursor - '0');
+            ++cursor;
+        }
+        if (row_number == 0 || row_number > SCRABBLE_BOARD_SIZE ||
+            (*cursor != '\0' && *cursor != ',' &&
+             !g_ascii_isspace(*cursor))) {
+            return "Enter blank squares as coordinates, such as H9.";
+        }
+        position.row = row_number - 1;
+
+        if (!move_index_at_position(move, position, &word_index)) {
+            return "Each blank square must be part of the opponent's word.";
+        }
+        if (scrabble_board_get_cell(board, position, &cell) !=
+                SCRABBLE_BOARD_OK ||
+            cell.letter != '\0') {
+            return "Only newly placed opponent tiles can be marked blank.";
+        }
+        if (scrabble_move_tile_at(move, word_index, &tile) !=
+            SCRABBLE_MOVE_OK) {
+            return "The opponent's blank tiles could not be prepared.";
+        }
+        if (tile.is_blank) {
+            return "Enter each opponent blank square only once.";
+        }
+        if (blank_count >= 2) {
+            return "A move can use at most two blank tiles.";
+        }
+        if (scrabble_move_set_tile_blank(move, word_index, 1) !=
+            SCRABBLE_MOVE_OK) {
+            return "The opponent's blank tiles could not be prepared.";
+        }
+        ++blank_count;
+        skip_coordinate_separators(&cursor);
+    }
+
+    return NULL;
+}
+
 static void update_move_control_availability(
     ScrabbleMainWindow *main_window,
     gboolean rack_is_ready) {
@@ -304,6 +397,8 @@ static void apply_move(
     refresh_board(main_window);
     scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
     update_move_control_availability(main_window, TRUE);
+    scrabble_move_controls_clear_opponent_blanks(
+        main_window->move_controls);
     scrabble_move_controls_set_word(
         main_window->move_controls, applied_move.word);
     turn = scrabble_game_turn_at(
@@ -376,6 +471,8 @@ static void record_opponent_move(
     scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
     rack_is_ready = read_rack(main_window, &rack);
     update_move_control_availability(main_window, rack_is_ready);
+    scrabble_move_controls_clear_opponent_blanks(
+        main_window->move_controls);
     scrabble_move_controls_set_word(
         main_window->move_controls, applied_move.word);
     turn = scrabble_game_turn_at(
@@ -394,11 +491,21 @@ static void record_requested_opponent_word(
     ScrabbleMainWindow *main_window,
     const ScrabbleMoveControlsRequest *request) {
     ScrabbleMove move;
+    const char *blank_error;
     ScrabbleMoveStatus status = scrabble_move_init(
         &move, request->word, request->start, request->direction);
 
     if (status != SCRABBLE_MOVE_OK) {
         set_status(main_window, move_error_message(status), "status-error");
+        return;
+    }
+
+    blank_error = mark_opponent_blank_squares(
+        scrabble_game_board(main_window->game),
+        request->opponent_blank_squares,
+        &move);
+    if (blank_error != NULL) {
+        set_status(main_window, blank_error, "status-error");
         return;
     }
 
@@ -430,6 +537,8 @@ static void undo_last_word(ScrabbleMainWindow *main_window) {
 
     refresh_board(main_window);
     scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
+    scrabble_move_controls_clear_opponent_blanks(
+        main_window->move_controls);
     rack_is_ready = main_window->dictionary != NULL &&
         read_rack(main_window, &rack);
     update_move_control_availability(main_window, rack_is_ready);
@@ -459,6 +568,8 @@ static void start_new_game(ScrabbleMainWindow *main_window) {
         main_window->move_controls, center);
     scrabble_move_controls_set_direction(
         main_window->move_controls, SCRABBLE_MOVE_HORIZONTAL);
+    scrabble_move_controls_clear_opponent_blanks(
+        main_window->move_controls);
     scrabble_move_controls_set_word(main_window->move_controls, "");
     scrabble_result_list_clear(GTK_LIST_BOX(main_window->result_list));
     update_input_state(main_window);

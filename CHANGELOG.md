@@ -31,7 +31,7 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
 - Manual opening-word controls for board position, direction, validated
   placement, score feedback, undo, and new-game reset.
 - Dedicated opponent-move recording that updates the board without reading or
-  changing the user's rack.
+  changing the user's rack, including optional blank-tile coordinates.
 - Opening placement directly from suggestions, with mouse and keyboard
   activation, shared validation, and explicit rack-versus-board score guidance.
 - GTK integration tests covering suggestion ownership, blank scoring,

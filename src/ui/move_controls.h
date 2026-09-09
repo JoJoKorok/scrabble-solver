@@ -15,11 +15,12 @@ typedef enum {
 typedef struct {
     ScrabbleMoveControlsAction action;
     const char *word;
+    const char *opponent_blank_squares;
     ScrabbleBoardPosition start;
     ScrabbleMoveDirection direction;
 } ScrabbleMoveControlsRequest;
 
-/* request and request->word are valid only during the callback. */
+/* request and its string fields are valid only during the callback. */
 typedef void (*ScrabbleMoveControlsCallback)(
     GtkWidget *move_controls,
     const ScrabbleMoveControlsRequest *request,
@@ -45,6 +46,8 @@ void scrabble_move_controls_set_history_available(
 void scrabble_move_controls_set_word(
     GtkWidget *move_controls,
     const char *word);
+void scrabble_move_controls_clear_opponent_blanks(
+    GtkWidget *move_controls);
 /* Uses the current start and direction and the same guard as Place word.
    Returns TRUE if dispatched; the callback reports validation errors. */
 gboolean scrabble_move_controls_place_word(

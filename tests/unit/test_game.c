@@ -251,6 +251,8 @@ static int records_opponent_moves_without_their_hidden_rack(void) {
         scrabble_move_init(
             &move, "VISE", position(7, 7), SCRABBLE_MOVE_VERTICAL));
     TEST_ASSERT_INT(
+        SCRABBLE_MOVE_OK, scrabble_move_set_tile_blank(&move, 1, 1));
+    TEST_ASSERT_INT(
         SCRABBLE_GAME_OK,
         scrabble_game_record_opponent_move(
             game,
@@ -266,7 +268,13 @@ static int records_opponent_moves_without_their_hidden_rack(void) {
     turn = scrabble_game_turn_at(game, 0);
     TEST_ASSERT(turn != NULL);
     TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_OPPONENT, turn->owner);
-    TEST_ASSERT_INT(14, turn->score.total_score);
+    TEST_ASSERT_INT(12, turn->score.total_score);
+    TEST_ASSERT_INT(
+        SCRABBLE_BOARD_OK,
+        scrabble_board_get_cell(
+            scrabble_game_board(game), position(8, 7), &cell));
+    TEST_ASSERT_INT('I', cell.letter);
+    TEST_ASSERT_INT(1, cell.is_blank);
 
     TEST_ASSERT_INT(
         SCRABBLE_MOVE_OK,
@@ -284,7 +292,7 @@ static int records_opponent_moves_without_their_hidden_rack(void) {
     TEST_ASSERT(turn != NULL);
     TEST_ASSERT_STRING("RAIN", turn->move.word);
     TEST_ASSERT_INT(SCRABBLE_TURN_OWNER_OPPONENT, turn->owner);
-    TEST_ASSERT_INT(6, turn->score.total_score);
+    TEST_ASSERT_INT(5, turn->score.total_score);
 
     TEST_ASSERT_INT(
         SCRABBLE_GAME_OK,
@@ -298,6 +306,7 @@ static int records_opponent_moves_without_their_hidden_rack(void) {
         scrabble_board_get_cell(
             scrabble_game_board(game), position(8, 7), &cell));
     TEST_ASSERT_INT('I', cell.letter);
+    TEST_ASSERT_INT(1, cell.is_blank);
 
     scrabble_game_destroy(game);
     scrabble_dictionary_destroy(dictionary);

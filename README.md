@@ -52,7 +52,9 @@ reduced or refilled automatically.
 To keep the board synchronized after the other player acts, select the first
 letter's square, choose the direction, enter their complete word, and click
 **Record opponent move**. The app validates the visible play without using or
-changing **Your Rack**.
+changing **Your Rack**. If the opponent placed a blank tile, enter its board
+square under **Opponent blank squares** before recording the move. Separate two
+blank squares with a space, such as `H9 J12`.
 
 ## Dictionary
 

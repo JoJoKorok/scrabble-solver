@@ -343,12 +343,22 @@ static void records_an_opponent_move_without_using_the_user_rack(
         fixture->controls, "move-word-entry");
     GtkWidget *opponent_button = find_button(
         fixture->controls, "Record opponent move");
+    GtkWidget *blank_entry = find_class(
+        fixture->controls, "opponent-blank-entry");
     (void)data;
 
     gtk_editable_set_text(GTK_EDITABLE(word_entry), "RETAINS");
     click(square(fixture, 7, 4));
     g_assert_true(gtk_widget_get_sensitive(opponent_button));
     gtk_editable_set_text(GTK_EDITABLE(fixture->rack), "EEOOYNR");
+    gtk_editable_set_text(GTK_EDITABLE(blank_entry), "H9");
+    click(opponent_button);
+    g_assert_nonnull(strstr(
+        gtk_label_get_text(GTK_LABEL(fixture->status)),
+        "part of the opponent's word"));
+    assert_board_empty(fixture);
+
+    gtk_editable_set_text(GTK_EDITABLE(blank_entry), "H8");
     click(opponent_button);
 
     assert_word(fixture, "RETAINS", 7, 4, FALSE);
@@ -356,7 +366,13 @@ static void records_an_opponent_move_without_using_the_user_rack(
         gtk_editable_get_text(GTK_EDITABLE(fixture->rack)), ==, "EEOOYNR");
     g_assert_nonnull(strstr(
         gtk_label_get_text(GTK_LABEL(fixture->status)),
-        "Opponent played RETAINS for 64 points"));
+        "Opponent played RETAINS for 62 points"));
+    g_assert_true(gtk_widget_has_css_class(
+        square(fixture, 7, 7), "board-blank-tile"));
+    g_assert_cmpstr(gtk_label_get_text(GTK_LABEL(find_class(
+        square(fixture, 7, 7), "board-cell-points"))), ==, "0");
+    g_assert_cmpstr(
+        gtk_editable_get_text(GTK_EDITABLE(blank_entry)), ==, "");
     g_assert_null(gtk_widget_get_first_child(GTK_WIDGET(fixture->results)));
 
     click(find_button(fixture->controls, "Undo"));
