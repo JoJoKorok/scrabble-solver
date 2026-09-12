@@ -89,6 +89,12 @@ Presentation resources such as the stylesheet are resolved independently of
 the saved dictionary path. This lets the interface continue displaying a
 readable error state when custom dictionary data is misconfigured.
 
+Windows runtime bundling is an opt-in install concern implemented by
+`cmake/install_windows_runtime.cmake.in`. It resolves DLL dependencies from the
+configured MSYS2 GTK prefix and stages dynamically loaded GTK data separately
+from application-owned resources. The core and normal install rules therefore
+remain independent of a particular Windows distribution layout.
+
 ## Adding a core feature
 
 1. Add a focused public header under `include/scrabble/` only if the feature is

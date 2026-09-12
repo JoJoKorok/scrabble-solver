@@ -14,6 +14,23 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 option(SCRABBLE_BUILD_GUI "Build the GTK 4 desktop application" ON)
+option(
+  SCRABBLE_BUNDLE_WINDOWS_RUNTIME
+  "Bundle the MSYS2 GTK runtime in a portable Windows package"
+  OFF
+)
+
+if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME AND NOT WIN32)
+  message(FATAL_ERROR
+    "SCRABBLE_BUNDLE_WINDOWS_RUNTIME is supported only on Windows"
+  )
+endif()
+
+if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME AND NOT SCRABBLE_BUILD_GUI)
+  message(FATAL_ERROR
+    "SCRABBLE_BUNDLE_WINDOWS_RUNTIME requires SCRABBLE_BUILD_GUI=ON"
+  )
+endif()
 
 configure_file(
   cmake/version_config.h.in
@@ -76,9 +93,48 @@ if(SCRABBLE_BUILD_GUI)
     DIRECTORY assets/
     DESTINATION ${CMAKE_INSTALL_DATADIR}/scrabble-solver
   )
+
+  if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME)
+    if(NOT GTK4_PREFIX)
+      message(FATAL_ERROR
+        "pkg-config did not report the GTK runtime prefix"
+      )
+    endif()
+    if(NOT CMAKE_OBJDUMP)
+      find_program(CMAKE_OBJDUMP NAMES objdump REQUIRED)
+    endif()
+
+    get_filename_component(
+      SCRABBLE_GTK_RUNTIME_ROOT
+      "${GTK4_PREFIX}"
+      REALPATH
+    )
+    configure_file(
+      cmake/install_windows_runtime.cmake.in
+      ${CMAKE_CURRENT_BINARY_DIR}/install_windows_runtime.cmake
+      @ONLY
+    )
+    install(
+      SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/install_windows_runtime.cmake
+    )
+    install(FILES LICENSE DESTINATION .)
+
+    set(CPACK_GENERATOR "ZIP")
+    set(CPACK_INCLUDE_TOPLEVEL_DIRECTORY ON)
+    set(CPACK_PACKAGE_FILE_NAME
+      "scrabble-solver-${PROJECT_VERSION}-windows-x86_64"
+    )
+    set(CPACK_PACKAGE_NAME "Scrabble Solver")
+    set(CPACK_PACKAGE_VENDOR "Joseph (JoJoKorok)")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+  endif()
 endif()
 
 include(CTest)
 if(BUILD_TESTING)
   add_subdirectory(tests)
+endif()
+
+if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME)
+  include(CPack)
 endif()

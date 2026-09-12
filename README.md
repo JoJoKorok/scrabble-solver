@@ -175,6 +175,23 @@ Do not mix the MSYS2 GTK libraries with a Visual Studio/MSVC build. The GTK
 package above and the UCRT64 GCC toolchain use the same ABI and should be used
 together.
 
+To produce a self-contained portable layout and ZIP archive, configure a
+separate release build with runtime bundling enabled:
+
+```sh
+cmake -S . -B build-package -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DSCRABBLE_BUILD_GUI=ON \
+  -DSCRABBLE_BUNDLE_WINDOWS_RUNTIME=ON \
+  -DBUILD_TESTING=OFF
+cmake --build build-package
+cmake --build build-package --target package
+```
+
+The ZIP contains the executable, application data, GTK runtime dependencies,
+supporting schemas and icons, and applicable license notices. This option is
+intended for an MSYS2 UCRT64 build and is rejected on other platforms.
+
 ## Core-only development
 
 GTK is optional when working only on the solver engine. Disable the GUI while
@@ -211,8 +228,8 @@ stage/
             └── application.css
 ```
 
-Windows distribution will eventually require bundling the GTK runtime beside
-the application. That packaging work is outside the current development build.
+The Windows portable-package build places the GTK runtime beside this install
+layout. Normal development and Debian installs continue to use system GTK.
 
 ## Project structure
 

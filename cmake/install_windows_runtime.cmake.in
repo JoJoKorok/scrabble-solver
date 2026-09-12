@@ -1,0 +1,112 @@
+set(_scrabble_runtime_root "@SCRABBLE_GTK_RUNTIME_ROOT@")
+set(_scrabble_install_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+set(_scrabble_install_bin
+  "${_scrabble_install_root}/@CMAKE_INSTALL_BINDIR@"
+)
+set(_scrabble_executable
+  "${_scrabble_install_bin}/scrabble_solver.exe"
+)
+
+if(NOT EXISTS "${_scrabble_executable}")
+  message(FATAL_ERROR
+    "Cannot bundle dependencies before installing ${_scrabble_executable}"
+  )
+endif()
+
+file(GLOB _scrabble_pixbuf_modules
+  "${_scrabble_runtime_root}/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.dll"
+)
+
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_PLATFORM "windows+pe")
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_TOOL "objdump")
+set(CMAKE_GET_RUNTIME_DEPENDENCIES_COMMAND "@CMAKE_OBJDUMP@")
+file(GET_RUNTIME_DEPENDENCIES
+  EXECUTABLES "${_scrabble_executable}"
+  MODULES ${_scrabble_pixbuf_modules}
+  DIRECTORIES "${_scrabble_runtime_root}/bin"
+  RESOLVED_DEPENDENCIES_VAR _scrabble_dependencies
+  UNRESOLVED_DEPENDENCIES_VAR _scrabble_unresolved
+  CONFLICTING_DEPENDENCIES_PREFIX _scrabble_conflicts
+  PRE_EXCLUDE_REGEXES
+    "^[Aa][Pp][Ii]-[Mm][Ss]-[Ww][Ii][Nn]-.*"
+    "^[Ee][Xx][Tt]-[Mm][Ss]-[Ww][Ii][Nn]-.*"
+  POST_EXCLUDE_REGEXES
+    ".*[\\/][Ww][Ii][Nn][Dd][Oo][Ww][Ss][\\/][Ss][Yy][Ss][Tt][Ee][Mm]32[\\/].*"
+)
+
+if(_scrabble_unresolved)
+  list(JOIN _scrabble_unresolved ", " _scrabble_unresolved_text)
+  message(FATAL_ERROR
+    "Unresolved Windows runtime dependencies: ${_scrabble_unresolved_text}"
+  )
+endif()
+
+if(_scrabble_conflicts_FILENAMES)
+  list(JOIN _scrabble_conflicts_FILENAMES ", " _scrabble_conflicts_text)
+  message(FATAL_ERROR
+    "Conflicting Windows runtime dependencies: ${_scrabble_conflicts_text}"
+  )
+endif()
+
+list(REMOVE_DUPLICATES _scrabble_dependencies)
+foreach(_scrabble_dependency IN LISTS _scrabble_dependencies)
+  file(INSTALL
+    DESTINATION "${_scrabble_install_bin}"
+    TYPE SHARED_LIBRARY
+    FILES "${_scrabble_dependency}"
+  )
+endforeach()
+
+foreach(_scrabble_helper IN ITEMS
+    gspawn-win64-helper.exe
+    gspawn-win64-helper-console.exe)
+  if(EXISTS "${_scrabble_runtime_root}/bin/${_scrabble_helper}")
+    file(INSTALL
+      DESTINATION "${_scrabble_install_bin}"
+      TYPE PROGRAM
+      FILES "${_scrabble_runtime_root}/bin/${_scrabble_helper}"
+    )
+  endif()
+endforeach()
+
+set(_scrabble_pixbuf_destination
+  "${_scrabble_install_root}/lib/gdk-pixbuf-2.0/2.10.0"
+)
+if(_scrabble_pixbuf_modules)
+  file(MAKE_DIRECTORY "${_scrabble_pixbuf_destination}/loaders")
+  foreach(_scrabble_module IN LISTS _scrabble_pixbuf_modules)
+    file(INSTALL
+      DESTINATION "${_scrabble_pixbuf_destination}/loaders"
+      TYPE SHARED_LIBRARY
+      FILES "${_scrabble_module}"
+    )
+  endforeach()
+endif()
+if(EXISTS
+    "${_scrabble_runtime_root}/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache")
+  file(INSTALL
+    DESTINATION "${_scrabble_pixbuf_destination}"
+    TYPE FILE
+    FILES
+      "${_scrabble_runtime_root}/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+  )
+endif()
+
+function(_scrabble_install_runtime_directory source parent)
+  if(EXISTS "${_scrabble_runtime_root}/${source}")
+    file(INSTALL
+      DESTINATION "${_scrabble_install_root}/${parent}"
+      TYPE DIRECTORY
+      FILES "${_scrabble_runtime_root}/${source}"
+    )
+  endif()
+endfunction()
+
+_scrabble_install_runtime_directory("etc/fonts" "etc")
+_scrabble_install_runtime_directory("share/fontconfig" "share")
+_scrabble_install_runtime_directory("share/glib-2.0/schemas" "share/glib-2.0")
+_scrabble_install_runtime_directory("share/gtk-4.0" "share")
+_scrabble_install_runtime_directory("share/icons/Adwaita" "share/icons")
+_scrabble_install_runtime_directory("share/icons/hicolor" "share/icons")
+_scrabble_install_runtime_directory("share/licenses" "share")
+_scrabble_install_runtime_directory("share/mime" "share")

@@ -47,6 +47,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   placement, no-move racks, repeated undo, reset, and starting a fresh game.
 - Exact alternating two-player workflow coverage across opponent entry, user
   suggestions, blank preservation, rack isolation, undo, and reset.
+- An opt-in portable Windows ZIP layout containing the executable, application
+  resources, GTK runtime dependencies, and third-party license notices.
 
 ### Planned
 
