@@ -112,6 +112,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
             -DSCRABBLE_BUILD_GUI=ON \
+            -DSCRABBLE_BUNDLE_WINDOWS_RUNTIME=ON \
             -DBUILD_TESTING=ON
 
       - name: Build GTK application
@@ -123,10 +124,35 @@ jobs:
       - name: Verify install layout
         run: |
           cmake --install build-ci-gui --prefix "$PWD/stage"
+          test -f stage/LICENSE
           test -f stage/bin/scrabble_solver.exe
+          test -f stage/bin/libgtk-4-1.dll
           test -f stage/share/scrabble-solver/dictionaries/enable2k.txt
           test -f stage/share/scrabble-solver/dictionaries/README.md
           test -f stage/share/scrabble-solver/styles/application.css
+          test -f stage/share/glib-2.0/schemas/gschemas.compiled
+          test -d stage/share/icons/Adwaita
+          test -f stage/share/licenses/gtk4/COPYING
+
+      - name: Package portable Windows application
+        run: cmake --build build-ci-gui --target package
+
+      - name: Verify portable Windows archive
+        run: |
+          archive="$(find build-ci-gui -maxdepth 1 -type f \
+            -name 'scrabble-solver-*-windows-x86_64.zip' -print -quit)"
+          test -n "$archive"
+          mkdir package-check
+          cmake -E chdir package-check cmake -E tar xf "../$archive"
+          package_root="$(find package-check -mindepth 1 -maxdepth 1 \
+            -type d -print -quit)"
+          test -n "$package_root"
+          test -f "$package_root/LICENSE"
+          test -f "$package_root/bin/scrabble_solver.exe"
+          test -f "$package_root/bin/libgtk-4-1.dll"
+          test -f "$package_root/share/scrabble-solver/dictionaries/enable2k.txt"
+          test -f "$package_root/share/glib-2.0/schemas/gschemas.compiled"
+          test -f "$package_root/share/licenses/gtk4/COPYING"
 
       - name: Configure core-only build
         run: |
@@ -140,3 +166,12 @@ jobs:
         run: |
           cmake --build build-ci-core
           ctest --test-dir build-ci-core --output-on-failure
+
+      - name: Upload portable Windows artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: scrabble-solver-windows-x86_64-${{ github.sha }}
+          path: build-ci-gui/scrabble-solver-*-windows-x86_64.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
