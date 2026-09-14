@@ -47,10 +47,10 @@ Status: in progress
 
 ## 1.0 - Supported desktop release
 
-Status: planned
+Status: in progress
 
-- Complete accessible board entry and move-result workflows.
-- Package the GTK runtime and application resources for Windows.
-- Produce an installable Debian package.
-- Document supported platforms, dictionary setup, and troubleshooting.
-- Establish a stable public core API and migration policy.
+- [ ] Complete accessible board entry and move-result workflows.
+- [x] Package the GTK runtime and application resources for Windows.
+- [x] Produce an installable Debian package.
+- [ ] Document supported platforms, dictionary setup, and troubleshooting.
+- [ ] Establish a stable public core API and migration policy.

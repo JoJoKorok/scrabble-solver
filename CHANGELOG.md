@@ -49,11 +49,12 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   suggestions, blank preservation, rack isolation, undo, and reset.
 - An opt-in portable Windows ZIP layout containing the executable, application
   resources, GTK runtime dependencies, and third-party license notices.
+- An opt-in Debian package with automatic GTK dependencies, desktop-menu
+  integration, a scalable application icon, and installed documentation.
 
 ### Planned
 
 - Background cancellation and progress reporting for long searches.
-- Self-contained Windows and Debian application packages.
 
 ## [0.1.0] - 2026-08-13
 

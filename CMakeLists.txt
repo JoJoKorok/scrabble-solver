@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(
   scrabble_solver
   VERSION 0.1.0
-  DESCRIPTION "Cross-platform Scrabble rack solver"
+  DESCRIPTION "Cross-platform Scrabble move solver"
   HOMEPAGE_URL "https://github.com/JoJoKorok/scrabble-solver"
   LANGUAGES C
 )
@@ -19,6 +19,11 @@ option(
   "Bundle the MSYS2 GTK runtime in a portable Windows package"
   OFF
 )
+option(
+  SCRABBLE_BUILD_DEBIAN_PACKAGE
+  "Build an installable Debian package with CPack"
+  OFF
+)
 
 if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME AND NOT WIN32)
   message(FATAL_ERROR
@@ -30,6 +35,19 @@ if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME AND NOT SCRABBLE_BUILD_GUI)
   message(FATAL_ERROR
     "SCRABBLE_BUNDLE_WINDOWS_RUNTIME requires SCRABBLE_BUILD_GUI=ON"
   )
+endif()
+
+if(SCRABBLE_BUILD_DEBIAN_PACKAGE)
+  if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    message(FATAL_ERROR
+      "SCRABBLE_BUILD_DEBIAN_PACKAGE is supported only on Linux"
+    )
+  endif()
+  if(NOT SCRABBLE_BUILD_GUI)
+    message(FATAL_ERROR
+      "SCRABBLE_BUILD_DEBIAN_PACKAGE requires SCRABBLE_BUILD_GUI=ON"
+    )
+  endif()
 endif()
 
 configure_file(
@@ -94,6 +112,17 @@ if(SCRABBLE_BUILD_GUI)
     DESTINATION ${CMAKE_INSTALL_DATADIR}/scrabble-solver
   )
 
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    install(
+      FILES packaging/linux/com.jojokorok.scrabblesolver.desktop
+      DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+    )
+    install(
+      FILES packaging/linux/com.jojokorok.scrabblesolver.svg
+      DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
+    )
+  endif()
+
   if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME)
     if(NOT GTK4_PREFIX)
       message(FATAL_ERROR
@@ -128,6 +157,37 @@ if(SCRABBLE_BUILD_GUI)
     set(CPACK_PACKAGE_VENDOR "Joseph (JoJoKorok)")
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
   endif()
+
+  if(SCRABBLE_BUILD_DEBIAN_PACKAGE)
+    install(
+      FILES LICENSE
+      DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/scrabble-solver
+      RENAME copyright
+    )
+    install(
+      FILES README.md CHANGELOG.md
+      DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/scrabble-solver
+    )
+
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+    set(CPACK_PACKAGE_NAME "scrabble-solver")
+    set(CPACK_PACKAGE_VENDOR "Joseph (JoJoKorok)")
+    set(CPACK_PACKAGE_CONTACT
+      "50675784+JoJoKorok@users.noreply.github.com"
+    )
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+      "GTK desktop application for finding legal Scrabble moves"
+    )
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    set(CPACK_DEBIAN_PACKAGE_RELEASE "1")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Joseph (JoJoKorok)")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "${PROJECT_HOMEPAGE_URL}")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+  endif()
 endif()
 
 include(CTest)
@@ -135,6 +195,6 @@ if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
-if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME)
+if(SCRABBLE_BUNDLE_WINDOWS_RUNTIME OR SCRABBLE_BUILD_DEBIAN_PACKAGE)
   include(CPack)
 endif()

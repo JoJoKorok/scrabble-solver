@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Scrabble Solver
+Comment=Find and score legal Scrabble moves
+Exec=scrabble_solver
+Icon=com.jojokorok.scrabblesolver
+Terminal=false
+Categories=Game;BoardGame;
+Keywords=Scrabble;word;board;solver;
+StartupNotify=true

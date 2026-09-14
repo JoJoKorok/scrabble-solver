@@ -133,6 +133,23 @@ Run the application:
 ./build/scrabble_solver
 ```
 
+To build an installable Debian package, use a separate release directory:
+
+```sh
+cmake -S . -B build-package -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DSCRABBLE_BUILD_GUI=ON \
+  -DSCRABBLE_BUILD_DEBIAN_PACKAGE=ON \
+  -DBUILD_TESTING=OFF
+cmake --build build-package
+cmake --build build-package --target package
+```
+
+The generated `.deb` installs the executable, application data, desktop-menu
+entry, scalable icon, and project documentation under `/usr`. Its shared GTK
+dependencies are detected from the built executable and recorded in the
+package metadata, so GTK remains managed by Debian rather than bundled.
+
 The [`libgtk-4-dev`](https://packages.debian.org/libgtk-4-dev) package is
 available in Debian 12 (Bookworm), Debian 13 (Trixie), and newer suites.
 
@@ -220,6 +237,10 @@ stage/
 ├── bin/
 │   └── scrabble_solver[.exe]
 └── share/
+    ├── applications/                         (Linux)
+    │   └── com.jojokorok.scrabblesolver.desktop
+    ├── icons/hicolor/scalable/apps/          (Linux)
+    │   └── com.jojokorok.scrabblesolver.svg
     └── scrabble-solver/
         ├── dictionaries/
         │   ├── enable2k.txt
@@ -239,6 +260,7 @@ assets/                 Runtime dictionaries and styles
 cmake/                  Generated build metadata templates
 docs/                   Architecture and roadmap documentation
 include/scrabble/       Stable public API for the solver engine
+packaging/linux/        Linux desktop integration assets
 src/core/               Platform-independent solver implementation
 src/platform/           Cross-platform resource discovery
 src/ui/                 GTK application and reusable interface components

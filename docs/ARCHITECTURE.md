@@ -95,6 +95,12 @@ configured MSYS2 GTK prefix and stages dynamically loaded GTK data separately
 from application-owned resources. The core and normal install rules therefore
 remain independent of a particular Windows distribution layout.
 
+Debian packaging is a separate opt-in CPack concern. It reuses the normal GNU
+install layout, adds project documentation, and derives shared-library package
+dependencies from the final executable. Linux desktop integration assets live
+under `packaging/linux/`; they do not participate in resource discovery or
+introduce platform dependencies into the core.
+
 ## Adding a core feature
 
 1. Add a focused public header under `include/scrabble/` only if the feature is
