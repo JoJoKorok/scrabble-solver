@@ -52,5 +52,5 @@ Status: in progress
 - [ ] Complete accessible board entry and move-result workflows.
 - [x] Package the GTK runtime and application resources for Windows.
 - [x] Produce an installable Debian package.
-- [ ] Document supported platforms, dictionary setup, and troubleshooting.
+- [x] Document supported platforms, dictionary setup, and troubleshooting.
 - [ ] Establish a stable public core API and migration policy.

@@ -51,6 +51,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   resources, GTK runtime dependencies, and third-party license notices.
 - An opt-in Debian package with automatic GTK dependencies, desktop-menu
   integration, a scalable application icon, and installed documentation.
+- A packaged-installation and troubleshooting guide covering supported
+  platforms, updates, removal, dictionary setup, and common gameplay mistakes.
 
 ### Planned
 

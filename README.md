@@ -26,6 +26,13 @@ The current development version is **0.1.0**. See [CHANGELOG.md](CHANGELOG.md)
 for milestone details and [docs/ROADMAP.md](docs/ROADMAP.md) for the planned
 path from rack solving to full board-position solving.
 
+## Install a packaged build
+
+Successful CI builds produce a portable Windows ZIP and an installable Debian
+package. See the [installation and troubleshooting guide](docs/INSTALLATION.md)
+for supported package formats, step-by-step installation, dictionary setup,
+updates, removal, and solutions to common problems.
+
 ## Solve successive turns
 
 1. Enter your rack (use `?` or `*` for a blank) and click **Find words**.
