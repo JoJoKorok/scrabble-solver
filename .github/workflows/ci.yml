@@ -29,6 +29,9 @@ jobs:
             git \
             build-essential \
             cmake \
+            desktop-file-utils \
+            dpkg-dev \
+            librsvg2-bin \
             ninja-build \
             pkgconf \
             libgtk-4-dev \
@@ -47,6 +50,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_FLAGS="-Wall -Wextra -Wpedantic -Werror" \
             -DSCRABBLE_BUILD_GUI=ON \
+            -DSCRABBLE_BUILD_DEBIAN_PACKAGE=ON \
             -DBUILD_TESTING=ON
 
       - name: Build GTK application
@@ -59,9 +63,36 @@ jobs:
         run: |
           cmake --install build-ci-gui --prefix "$PWD/stage"
           test -x stage/bin/scrabble_solver
+          test -f stage/share/applications/com.jojokorok.scrabblesolver.desktop
+          test -f stage/share/icons/hicolor/scalable/apps/com.jojokorok.scrabblesolver.svg
           test -f stage/share/scrabble-solver/dictionaries/enable2k.txt
           test -f stage/share/scrabble-solver/dictionaries/README.md
           test -f stage/share/scrabble-solver/styles/application.css
+          test -f stage/share/doc/scrabble-solver/copyright
+
+      - name: Package Debian application
+        run: cmake --build build-ci-gui --target package
+
+      - name: Verify Debian package
+        run: |
+          set -eu
+          package="$(find build-ci-gui -maxdepth 1 -type f \
+            -name 'scrabble-solver_*_amd64.deb' -print -quit)"
+          test -n "$package"
+          test "$(dpkg-deb --field "$package" Package)" = "scrabble-solver"
+          test "$(dpkg-deb --field "$package" Architecture)" = "amd64"
+          dpkg-deb --field "$package" Depends | grep -q 'libgtk-4-1'
+          mkdir package-check
+          dpkg-deb --extract "$package" package-check
+          test -x package-check/usr/bin/scrabble_solver
+          test -f package-check/usr/share/scrabble-solver/dictionaries/enable2k.txt
+          test -f package-check/usr/share/scrabble-solver/styles/application.css
+          test -f package-check/usr/share/doc/scrabble-solver/copyright
+          desktop-file-validate \
+            package-check/usr/share/applications/com.jojokorok.scrabblesolver.desktop
+          rsvg-convert \
+            package-check/usr/share/icons/hicolor/scalable/apps/com.jojokorok.scrabblesolver.svg \
+            --output package-check/icon-check.png
 
       - name: Configure core-only build
         run: |
@@ -75,6 +106,15 @@ jobs:
         run: |
           cmake --build build-ci-core
           ctest --test-dir build-ci-core --output-on-failure
+
+      - name: Upload Debian artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: scrabble-solver-debian-amd64-${{ github.sha }}
+          path: build-ci-gui/scrabble-solver_*_amd64.deb
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
   windows:
     name: Windows UCRT64
