@@ -282,6 +282,10 @@ tests/unit/             Focused tests that mirror production modules
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for module responsibilities,
 ownership rules, and guidance for extending the project.
 
+Changes to the portable C interface follow the
+[core API stability policy](docs/API_STABILITY.md), including pre-1.0 source
+compatibility, ownership, deprecation, and migration expectations.
+
 Contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md), which documents
 the required checks, architectural boundaries, and release process.
 

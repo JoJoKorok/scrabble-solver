@@ -53,4 +53,5 @@ Status: in progress
 - [x] Package the GTK runtime and application resources for Windows.
 - [x] Produce an installable Debian package.
 - [x] Document supported platforms, dictionary setup, and troubleshooting.
-- [ ] Establish a stable public core API and migration policy.
+- [x] Define the public core boundary and migration policy.
+- [ ] Freeze the public core API for 1.0.

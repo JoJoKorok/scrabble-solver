@@ -63,10 +63,17 @@ Pull requests should pass the Windows UCRT64 and Debian 13 jobs in
 application version. CMake generates the private version header used by the C
 implementation.
 
+Changes under `include/scrabble/` must follow the
+[core API stability policy](docs/API_STABILITY.md). During the `0.x` series, an
+intentional source break requires a minor version and documented migration;
+patch releases remain source-compatible. A stable binary ABI is not currently
+part of the release contract.
+
 For a release:
 
 1. update the project version in `CMakeLists.txt`;
-2. move completed entries from `Unreleased` in `CHANGELOG.md` into a dated
+2. review public-header changes against the API stability policy;
+3. move completed entries from `Unreleased` in `CHANGELOG.md` into a dated
    version section;
-3. run all required checks on Windows and Debian; and
-4. create the matching `v<version>` tag only after the release commit is final.
+4. run all required checks on Windows and Debian; and
+5. create the matching `v<version>` tag only after the release commit is final.

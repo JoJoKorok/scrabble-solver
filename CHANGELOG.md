@@ -53,6 +53,8 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
   integration, a scalable application icon, and installed documentation.
 - A packaged-installation and troubleshooting guide covering supported
   platforms, updates, removal, dictionary setup, and common gameplay mistakes.
+- A documented public core boundary with pre-1.0 compatibility, ownership,
+  versioning, deprecation, and migration rules.
 
 ### Planned
 

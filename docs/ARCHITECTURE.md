@@ -25,6 +25,9 @@ scrabble_core
 ```
 
 Dependencies flow toward `scrabble_core`; the core never imports GTK or the UI.
+Declarations under `include/scrabble/` follow the
+[core API stability policy](API_STABILITY.md); source-tree headers elsewhere
+remain internal implementation interfaces.
 
 ## Module responsibilities
 
@@ -104,7 +107,7 @@ introduce platform dependencies into the core.
 ## Adding a core feature
 
 1. Add a focused public header under `include/scrabble/` only if the feature is
-   part of the stable core API.
+   part of the public core API and can follow its compatibility policy.
 2. Add its implementation under `src/core/` and register it with
    `scrabble_core` in the root `CMakeLists.txt`.
 3. Add a matching test file under `tests/unit/` and register it in
