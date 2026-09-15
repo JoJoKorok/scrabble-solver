@@ -115,7 +115,7 @@ development files:
 
 ```sh
 sudo apt update
-sudo apt install build-essential cmake ninja-build pkgconf libgtk-4-dev
+sudo apt install build-essential cmake file ninja-build pkgconf libgtk-4-dev
 ```
 
 Configure, build, and test:

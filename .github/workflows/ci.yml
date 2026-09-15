@@ -31,6 +31,7 @@ jobs:
             cmake \
             desktop-file-utils \
             dpkg-dev \
+            file \
             librsvg2-bin \
             ninja-build \
             pkgconf \
