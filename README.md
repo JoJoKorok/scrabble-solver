@@ -22,9 +22,10 @@ The app validates the main word and every perpendicular word made by a move.
 It accounts for existing board letters, blanks, unused premium squares, and
 seven-tile bonuses before ranking connected suggestions.
 
-The current development version is **0.1.0**. See [CHANGELOG.md](CHANGELOG.md)
-for milestone details and [docs/ROADMAP.md](docs/ROADMAP.md) for the planned
-path from rack solving to full board-position solving.
+The current project version is **0.2.0**. See the
+[0.2.0 release notes](docs/releases/0.2.0.md) for highlights,
+[CHANGELOG.md](CHANGELOG.md) for milestone details, and
+[docs/ROADMAP.md](docs/ROADMAP.md) for future direction.
 
 ## Install a packaged build
 

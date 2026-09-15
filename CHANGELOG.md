@@ -5,6 +5,12 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
 
 ## [Unreleased]
 
+### Planned
+
+- Background cancellation and progress reporting for long searches.
+
+## [0.2.0] - 2026-09-15
+
 ### Added
 
 - A bundled, attributed ENABLE 2K word-game dictionary containing 169,266
@@ -56,10 +62,6 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
 - A documented public core boundary with pre-1.0 compatibility, ownership,
   versioning, deprecation, and migration rules.
 
-### Planned
-
-- Background cancellation and progress reporting for long searches.
-
 ## [0.1.0] - 2026-08-13
 
 ### Added
@@ -73,5 +75,6 @@ Notable changes to Scrabble Solver are recorded in this file. The project uses
 - Unit tests for core behavior and resource discovery.
 - Warning-clean Windows UCRT64 and Debian 13 continuous integration builds.
 
-[Unreleased]: https://github.com/JoJoKorok/scrabble-solver/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/JoJoKorok/scrabble-solver/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/JoJoKorok/scrabble-solver/releases/tag/v0.2.0
 [0.1.0]: https://github.com/JoJoKorok/scrabble-solver/releases/tag/v0.1.0
